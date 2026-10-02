@@ -1,51 +1,68 @@
-# Can We Read and Steer Moral/Emotional Tone from a Small LLM's Internal Activations?
-### An empirical study of observer-probes and activation steering across four ethical/affective axes
+# Readable ≠ Steerable: Why Probe-Based Steering of Moral Tone Cannot Beat a Sham
+### A mechanism-first study of observer probes and activation steering across four ethical/affective axes, and where the scale boundary sits
 
 **Working title (short):** *MESE-CR: Concept Probes + Activation Steering for Moral-Emotional Control in Small LLMs*
 
 ---
 
 ## Abstract (draft)
-Large language models (LLMs) encode semantic and social abstractions in their
-intermediate ("hidden") activations. We ask whether the emotional/moral position of
-text can be (i) *read out* from internal activations with a small supervised probe, and
-(ii) *manipulated* by adding a steering direction to the residual stream — and how a
-nonlinear probe ("bending fabric") compares to a linear one.
+Large language models encode moral and affective information in their intermediate
+activations, and a growing literature both *reads* that information with probes and
+*writes* to it with steering vectors. On a 1.5B instruction-tuned model we reproduce
+the reading result and then fail, cleanly and repeatedly, to steer — and the claim of
+this paper is that **the failure is not an artifact of our setup but a structural
+property of probe-based steering.**
 
-Two methodological results drive the paper. First, **random train/test splits
-overstate probe accuracy when the stimulus set is template-generated**: on our
-884-sentence dataset, a control feature space containing *only the template
-identity and no tone information at all* scores 0.76–0.93 under random 5-fold CV,
-but falls to 0.42–0.55 under **template-grouped** CV (a whole template held out).
-We therefore report grouped CV as the honest protocol. Second, a **Steerer null
-that is now clean**: once the measuring probe is validated (held-out accuracy
-0.66–0.98, comfortably above the 0.60 gate) and four direction estimators — including
-the probe's own supervised gradient — are compared against a sham random vector at
-the same scale, adding a direction to the residual stream moves tone only −0.06…+0.10,
-indistinguishable from the sham (−0.09…+0.06). So "steering failed" and "measurement
-is noise" are now separable, and this is a genuine *steering* null, not a measurement
-artifact.
+The central result is a mechanism, verified without a model. For any two-layer probe
+`f(x) = W₂·SiLU(W₁x + b₁) + b₂`, the input gradient is
+`∇f(x) = W₁ᵀ·diag(SiLU′(W₁x + b₁))·W₂ᵀ`, which lies in `rowspace(W₁)` **for every
+x**. Every practical way of deriving a steering key from a probe — the gradient at the
+positive-pole mean, averaged along the μ⁻→μ⁺ path, or averaged over the whole positive
+class — therefore differs only in its per-unit gate scalars and cannot leave that
+subspace. On real activations the three gradient keys are mutually **cos 0.995–1.000**;
+`cos(logreg, mean) = +1.000` exactly, so the fitted logistic key is not independent
+either; and even the probe's own supervised gradient sits at **cos 0.845–0.982** with
+the plain mean difference. `test_steering_collapse.py` confirms the subspace containment
+to machine precision (residual **0.000000**) on synthetic data, with no model. So the
+probe can *read* a nonlinear boundary (grouped MLP 0.78–0.98 vs grouped linear
+0.46–0.66) yet cannot *write* along it, because its keys are confined to a subspace that
+the readout does not need.
 
-The central empirical findings are: **(i)** tone IS nonlinearly decodable from
-mean-pooled activations with genuine held-out-template generalization (grouped
-MLP 0.78–0.98 on all four axes across layers 12/14/16, Care/Harm ≈ 0.98);
-**(ii)** the readable structure is **nonlinear** — grouped linear probes sit at or
-below chance (0.46–0.66) while an MLP reads the same axes (0.78–0.98), the
-cleanest evidence for our "bending fabric > rigid hyperplane" hypothesis; a
-calibration control confirms this is not an undertraining artifact, because even a
-*perfectly* linear rule earns only 0.75 under this protocol and 5× the training
-changes that by +0.04;
-**(iii)** but **reading ≠ steering** — the most readable axis (Care/Harm, 0.98) is
-among the least steerable (best real slope +0.10, inside its own sham noise), and
-even steering along the validated probe's own supervised gradient (probe-grad)
-does not beat a random vector, showing that mean-pooled activation addition at
-layer 14 of a 1.5B model does not transfer readable tone into controllable
-generation at these scales.
+We are careful to separate two claims that are easy to conflate. The subspace theorem
+explains why the probe keys coincide with *each other*. That they also coincide with
+`mean` on real activations is a separate, **empirical** fact — BCE training aligns `W₁`
+with the class-separation direction — and it is contingent, not automatic: on a
+synthetic *nonlinear* boundary the probe key points well away from `mean` (measured
+cos **0.39**) while still lying inside `rowspace(W₁)`. Both facts are needed, and both
+are testable offline.
+
+The protocol is deliberately conservative, because this is a negative result and the
+cheapest way to be wrong is to report an artifact. (a) **Template-grouped CV**: on our
+884-sentence audited dataset (740 templated + 144 authored, 146 template groups), a
+control feature space containing *only template identity and no tone information at
+all* scores 0.76–0.93 under random 5-fold CV but falls to 0.42–0.55 under grouped CV,
+so random splits are discarded. (b) **Per-axis reading controls**: length-only and
+label-permutation. (c) A **sham** direction at matched scale, so that "steering
+failed" is separable from "measurement is noise". Under these controls, seven keys —
+mean, logistic, LDA, probe-grad, probe-grad-path, probe-grad-class, and a sham —
+across layers {14, 20, 26} × {mean, last-token} pooling × 4 axes (Valence, Arousal,
+Care/Harm, Fairness) move tone no further than the sham: permutation **p = 0.438**
+over the whole 24-cell grid.
+
+**Scope, stated plainly.** Every number above is measured on one 1.5B model. We
+therefore report **a boundary, not a universal**, and position it against Sun et al.'s
+Valence–Arousal subspace, which *does* steer at 8–14B. The natural reading — that the
+confinement is a small-scale phenomenon — is a testable prediction, and we set that
+test up (a 3B/8B rung at matched relative depth, left unquantized so the activation
+geometry stays comparable) rather than claim its outcome. Related nulls at other scales
+are now appearing (Da Silva et al., ACL 2025), so the contribution that travels is the
+*mechanism* — scale-free in its statement and falsifiable at any size.
 
 *(Quantitative results below are the released scripts' real CUDA output on the
-884-sentence dataset: the full Observer grid (REPS=10, layers 12/14/16) and the
-full Steerer run (5 prompts × 4 samples × 3 scales; mean / logreg / LDA /
-probe-grad + sham).)*
+884-sentence dataset: the full Observer grid (REPS=10, layers 12/14/16), the full
+Steerer run (5 prompts × 4 samples × 3 scales), and the step7 key/layer/pooling grid.
+The key-position cosine table is produced by `steering_keys.py` and needs no GPU;
+`test_steering_collapse.py` verifies its central identity offline.)*
 
 ---
 
@@ -61,6 +78,15 @@ probe-grad + sham).)*
   - RQ2: Does a nonlinear ("bending fabric") probe beat a linear ("rigid hyperplane")
     probe? (Tests the central hypothesis of this work.)
   - RQ3: Can activation steering predictably shift output tone (dose-response)?
+  - RQ4 (the question this paper turns on): **where do the steering keys point?**
+    If every probe-derived key lies in span(μ⁺ − μ⁻), then the RQ3 null is a property
+    of the method rather than an empirical accident — and only then can we state a
+    boundary claim instead of an unexplained failure.
+- Contributions: (1) the probe-gradient `rowspace(W₁)` identity (§4) and its measured
+  consequence on real activations; (2) evidence that the two obvious "nonlinear key"
+  repairs do not escape it; (3) a scale-bound, control-heavy negative result with a
+  documented mechanism, plus an offline test (`test_steering_collapse.py`) that
+  reproduces the mechanism with no model at all.
 
 ## 2. Related Work (cite correctly — do NOT claim these are new)
 - Probing / concept bottleneck models: Alain & Bengio (2018, linear probes); Belinkov
@@ -70,6 +96,38 @@ probe-grad + sham).)*
   recent steering literature.
 - Affective axes: Russell (1980) Circumplex Model (Valence/Arousal).
 - Morality: Haidt & Joseph (2004) Moral Foundations Theory (Care/Harm, Fairness/Cheating).
+- **Closest prior work, and how this paper differs.** This is a crowded area and most
+  of what we measure has a precedent; what we have *not* found stated anywhere is the
+  mechanism in §4.
+  - **Hewitt & Liang (EMNLP 2019)** — control tasks for probing, including the
+    structural/template control we apply. We are *using* their discipline, not
+    proposing it.
+  - **Shaier et al. (arXiv 2402.00123)** — templated probing inflates accuracy scores.
+    Our template-identity control (0.76–0.93 under random splits) is an independent
+    replication at the 1.5B scale.
+  - **Da Silva et al. (ACL 2025), "Steering off Course"** — steering results vary
+    substantially across models, and steering can hurt performance. Closest in spirit
+    to our null, but theirs is an empirical *variability* claim across many models. We
+    do not restate it; we supply a mechanism for why a probe-derived key would be
+    expected to underperform a sham, which that framing does not identify.
+  - **Tan et al. (NeurIPS 2024)** — analyzes what steering vectors actually do (e.g.
+    that they act on a restricted region and can be approximated by a bias-like
+    intervention). §4 should be read as a probe-specific, exactly-verifiable instance
+    of that picture, not a competing account.
+  - **Sun et al., "Valence–Arousal Subspace in LLMs"** — the *direct counterexample*
+    our scope statement is built around: they report successful VA steering at 8–14B
+    and argue for **lexical mediation** (signature tokens carry the effect). We cannot
+    dismiss this. It bounds our claim to 1.5B, and it turns their lexical mechanism
+    into a concrete target: our length-only and surface controls are precisely the
+    instrument that would catch an artifact of that kind, which is the adversarial
+    test of their setting we propose.
+- **What is actually new here:** (i) the probe-gradient `rowspace(W₁)` identity of §4
+  and its measured consequence (gradient keys at cos 0.845–0.982 with the mean
+  difference, and `cos(logreg, mean) = +1.000` exactly); (ii) the demonstration that
+  the two obvious "nonlinear key" repairs — path-averaged and class-averaged gradients
+  — do **not** escape it; (iii) the deliberate separation of that theorem from the
+  *contingent* empirical collapse. Everything else is careful reproduction under
+  controls, and is labelled as such.
 
 ## 3. Method
 - Model: Qwen/Qwen2.5-1.5B-Instruct; layers {12,14,16}; mean-pooled hidden states.
@@ -107,15 +165,89 @@ probe-grad + sham).)*
   the training moves linear by +0.04 — so linear-vs-MLP here is an operational
   comparison under fixed training settings, not a representational proof, and control
   probes must use the measured probe's capacity or they pass vacuously.
-- Steerer: direction estimated three ways — `mean` (mean_pos − mean_neg),
-  `logreg` (fitted logistic weights), `lda` (Fisher: (Cov+λI)⁻¹Δμ) — each compared
-  against a **sham `random` unit direction** at the same scale; added at layer 14
-  at scale in {0.0, 1.5, 4.0}; tone measured by the probe *with the steer hook
-  removed*; fluency = mean per-token log-likelihood. Axes whose measuring probe
-  fails a held-out accuracy gate (0.60) are reported as NOT MEASURABLE rather
-  than as a steering failure.
+- Steerer: direction estimated **seven** ways (`steering_keys.py`), each compared
+  against a **sham `random` unit direction** at the same scale:
+  `mean` (mean_pos − mean_neg), `logreg` (fitted logistic weights),
+  `lda` (Fisher: (Cov+λI)⁻¹Δμ), `probe-grad` (∂logit/∂x of the measuring probe at
+  the positive-pole mean), `probe-grad-path` (that Jacobian averaged along μ⁻→μ⁺),
+  `probe-grad-class` (…averaged over every positive example), and `random`. Added at
+  layer 14 at scale in {0.0, 1.5, 4.0}; tone measured by the probe *with the steer
+  hook removed*; fluency = mean per-token log-likelihood. Axes whose measuring probe
+  fails a held-out accuracy gate (0.60) are reported as NOT MEASURABLE rather than as
+  a steering failure.
+- **Key-position instrument (§4.0):** every key is also unit-normalized and its cosine
+  against `mean` is printed *before* any steering. That costs no generation, so it is
+  logged for every layer × pooling × axis in `step7_sweep.py`, and it — not the slopes —
+  is the evidence for the confinement claim.
 
 ## 4. Results
+
+### 4.0 The mechanism first: every probe-based key is confined to rowspace(W₁)
+
+This is the paper's load-bearing claim, and it needs no model to check. Write the
+measuring probe as a two-layer MLP, `f(x) = W₂·SiLU(W₁x + b₁) + b₂` — exactly the
+architecture used in steps 5–7. Its input gradient at any point x is
+
+    ∇f(x) = W₁ᵀ · diag( SiLU′(W₁x + b₁) ) · W₂ᵀ,
+
+so **∇f(x) ∈ rowspace(W₁) for every x**. Any key obtained by *averaging* ∇f over a set
+of points — one point (the positive-pole mean), a path (μ⁻ → μ⁺), or an entire class
+(all positive examples) — is therefore a vector of the form `W₁ᵀ·diag(ḡ)·W₂ᵀ` for some
+per-unit gate vector ḡ. **Averaging cannot change where the key points; it can only
+re-weight the hidden units.** What we called the "nonlinear steering key" is a linear
+functional of `W₁` wearing a nonlinear probe's clothes.
+
+Verified in `test_steering_collapse.py` (CPU, no model): the fraction of each probe key
+lying *outside* `rowspace(W₁)` is **0.000000** to machine precision, while the same
+measure for the plain `mean` key is 0.331 — so the containment is specific to gradient
+keys and is not a triviality.
+
+**Consequence 1 — the three gradient keys coincide.** Measured pairwise cosines among
+`probe-grad` (point), `probe-grad-path`, and `probe-grad-class` are **0.995–1.000**. The
+two obvious repairs for a collapsing key therefore do not work, for a provable reason:
+they re-weight the gates without leaving the subspace. This is a negative result about
+the whole *method family*, and it closes the "you only tried a point gradient"
+objection in advance.
+
+**Consequence 2 — on real activations they also coincide with `mean`.** This second
+step is **empirical** and must not be conflated with the theorem. At layer 14, mean
+pooling (step6; 0.845–0.982 across axes, and 0.72–0.98 across the 24 step7 cells):
+
+| Axis | probe acc | cos(logreg, mean) | cos(lda, mean) | cos(probe-grad, mean) | cos(sham, mean) |
+|---|---:|---:|---:|---:|---:|
+| Valence | 0.72 | **+1.000** | +0.731 | +0.982 | +0.009 |
+| Arousal | 0.81 | **+1.000** | +0.704 | +0.964 | −0.016 |
+| Care/Harm | 0.98 | **+1.000** | +0.429 | +0.960 | −0.055 |
+| Fairness | 0.66 | **+1.000** | +0.493 | +0.845 | −0.030 |
+
+(Values are from the committed `results_step6*.txt` logs; the `steering_keys.py`
+refactor preserves this arithmetic exactly and the next run prints a fuller table,
+adding `probe-grad-path` / `probe-grad-class` per axis.) Two things fall out:
+
+- **`logreg` is not an independent key.** `cos(logreg, mean) = +1.000` on all four axes.
+  The features are L2-normalized per row and the classes are balanced, so the BCE
+  optimum sits on the mean-difference direction: the fitted logistic key is the mean
+  key up to scale. Any experiment counting "mean" and "logreg" as two independent
+  directions is double-counting one of them.
+- **The better the probe reads, the harder its gradient collapses.** Care/Harm is the
+  most readable axis (0.98) and its gradient key is the most confined (0.960); Fairness
+  is the least readable (0.66) and the least confined (0.845). A *more* readable axis is
+  a *more* linearly-separable one, and a point gradient on a linearly-separable problem
+  is a linear discriminant by construction.
+
+**Consequence 3 — the collapse is contingent, which is what makes it a finding.** If the
+theorem alone explained everything, the collapse would be a tautology and not worth
+reporting. It is not: on a synthetic *nonlinear* boundary the probe key points well away
+from `mean` (measured **cos 0.39**) while still lying inside `rowspace(W₁)`. So the
+theorem explains why probe keys agree with *each other*; BCE training aligning `W₁` with
+the class-separation direction is what explains why they agree with `mean` on real
+activations. Two claims, two tests, both asserted separately in
+`test_steering_collapse.py`.
+
+**Therefore** the RQ3 null below is not "steering mysteriously failed". Every key
+derivable from the probe is confined to a subspace the probe never needed in order to
+*read* — which is precisely the gap between a readout and a direction for control.
+
 - **RQ0/M5 (protocol validity, measured offline — no GPU needed).** Same CV, same
   labels, features = template identity only (zero tone information):
 
@@ -164,8 +296,11 @@ probe-grad + sham).)*
   budget, and 0.46–0.66 lies *below* what perfect linear structure would earn here.
 - **RQ3 (steering) — a clean, gated NULL, now under a supervised key too.** Full run:
   every axis passes the measuring-probe gate (grouped acc 0.66–0.98), so the readout
-  is valid; yet adding any of the four direction estimators at scale up to 4.0 moves
-  tone only within −0.06…+0.10, no more than the SHAM random direction (−0.09…+0.06):
+  is valid; yet adding any of the direction estimators at scale up to 4.0 moves
+  tone only within −0.06…+0.10, no more than the SHAM random direction (−0.09…+0.06).
+  The table below is the original four-key run from the committed log; the current
+  script adds `probe-grad-path` and `probe-grad-class`, which are confined to the same
+  subspace (§4.0) so their slopes cannot recover an effect the four below missed:
 
   | Axis | read acc | mean sl | logreg sl | lda sl | probe-grad sl | SHAM random sl |
   |---|---:|---:|---:|---:|---:|---:|
@@ -237,6 +372,13 @@ controls, however, have not been re-run**, so the last-token > mean contrast rem
   is superseded only in degree, not in kind.
 
 ## 5. Discussion
+- **The mechanism explains the null (this paper's main claim).** Every probe-derived
+  steering key lies in `rowspace(W₁)` by construction (§4.0), and on these activations
+  it additionally collapses onto the mean-difference direction (gradient keys
+  cos 0.845–0.982; `logreg` cos +1.000 exactly). So "readable ≠ steerable" is not an
+  observation but a *consequence*: the probe reads a nonlinear boundary, and every key
+  it can hand us is a linear functional of its own first layer. RQ4 therefore predicts
+  RQ3's null, and the prediction is checkable offline.
 - **Tone is readable, and now defensibly so.** Grouped CV (whole template held out)
   gives 0.78–0.98 across all four axes, stable across layers 12/14/16 — far above
   0.50 chance and unaffected by the template-identity control that invalidates
@@ -254,19 +396,20 @@ controls, however, have not been re-run**, so the last-token > mean contrast rem
   0.75 in this d≫n, few-template regime — so it establishes that an MLP extracts
   signal a linear probe cannot *under these settings*, not that no linear readout
   of any kind exists.
-- **Measurement before intervention — and now a clean steering null.** Because the
-  measuring probe is validated on every axis (0.66–0.98) and all four direction
-  estimators agree — including a **probe-gradient** key derived from the readout's
-  own nonlinear manifold — yet none beats a sham random vector, the steering null
-  is a genuine property of mean-pooled activation addition at layer 14 (scale
-  ≤ 4.0) on a 1.5B model — not a measurement artifact. This lets us say something
-  precise that the earlier results could not: *the axis is readable but not
-  steerable this way* — even with a supervised, nonlinear-derived steering key.
-- **Readable ≠ steerable.** Care/Harm is the most readable axis (grouped 0.98) yet
-  barely moves under its own steering direction (best supervised slope +0.10,
-  probe-grad −0.06). Whatever representation
-  the nonlinear probe exploits is not a direction that remains in the residual
-  stream when added at scale — a concrete, citable illustration.
+- **Measurement before intervention — and a steering null that is now explained.**
+  Because the measuring probe is validated on every axis (0.66–0.98) and all seven
+  direction estimators agree — including a **probe-gradient** key derived from the
+  readout's own nonlinear manifold *and* its two non-point repairs — yet none beats a
+  sham random vector, the null is a genuine property of mean-pooled activation addition
+  on a 1.5B model, not a measurement artifact. §4.0 then says *why*: the supervised key
+  is confined to `rowspace(W₁)` and collapses onto `mean` (cos 0.845–0.982), so steering
+  with it re-runs an experiment whose answer we already know.
+- **Readable ≠ steerable — and now mechanistically so.** Care/Harm is the most readable
+  axis (grouped 0.98) yet barely moves under its own steering direction (best supervised
+  slope +0.10, probe-grad −0.06) — and §4.0 explains why rather than leaving it as a
+  coincidence: the most readable axis is the most linearly-separable one, so its probe
+  gradient is the *most* confined to `rowspace(W₁)` and collapses hardest onto `mean`
+  (cos 0.960). The illustration and the mechanism agree, which is the point.
 - **Care/Harm hard failure (qualitative):** intent/context-conditional morality is
   hard to decode from mean pooling alone; the probe still leans on surface cues
   (R4 non-replication) → future work (token-level or attention-weighted pooling).
@@ -278,6 +421,16 @@ controls, however, have not been re-run**, so the last-token > mean contrast rem
   and an automatic leakage/concreteness audit.
 - Single model; mean pooling plus last-token pooling; Observer layers {12,14,16},
   steering searched at {14,20,26}; no attention-weighted or token-level analysis.
+- **The scale boundary is the biggest limitation, and it is deliberate.** Everything
+  measured here is one 1.5B model, so we claim a boundary, not a universal. The §4.0
+  mechanism is stated for the probe *architecture* rather than the model, so it holds at
+  any size; what is scale-dependent is the *second* step — whether BCE training on a larger
+  model's activations leaves the probe gradient aligned with the mean difference, or
+  whether a richer representation pushes them apart. Sun et al.'s successful
+  Valence–Arousal steering at 8–14B is the direct counterexample we cannot dismiss, and
+  the decisive experiment (same protocol, 3B/8B, matched *relative* depth, **unquantized**
+  so the activation geometry is comparable) is specified in §8b but not run. Until it is,
+  "the confinement is a small-scale phenomenon" remains a live alternative to our reading.
 - The last-token *reading* advantage (0.75–1.00 vs 0.63–0.99 mean-pooled) is not yet
   controlled for sequence length, which last-token residual co-encodes; the
   template-identity control cannot test this (it is held out wholesale, so it sits at
@@ -318,35 +471,52 @@ controls, however, have not been re-run**, so the last-token > mean contrast rem
   alignment research and discuss dual-use. Steering is not a complete safety mechanism.
 
 ## 8. Conclusion & Next Steps
-- **Conclusion.** On an 884-sentence, audit-gated dataset, a 1.5B model's
-  mean-pooled activations encode moral/affective tone with genuine held-out-
-  template generalization (grouped MLP 0.78–0.98, stable layers 12/14/16), and
-  that readable structure is nonlinear (grouped linear 0.46–0.66 ≈ chance). Yet
-  activation steering at layer 14 does not transfer that readable tone into
-  generation: every direction estimator (mean / logistic / LDA / probe-grad of the
-  validated probe) moves tone −0.06…+0.10, no more than a random sham, despite a
-  validated measuring readout. A 24-cell search over layers {14,20,26} × {mean,
-  last-token} pooling reproduces the null (permutation p = 0.438; the "winning"
-  direction flips sign across adjacent layers), while last-token pooling *improves
-  reading* (probe 0.99–1.00). Reading works; steering this way does not — a precise,
-  control-aware, and now search-tested null.
-- **Next:** (1) ✅ observer grid captured; (2) ✅ probe-gradient key (step6) and
-  ✅ layer sweep + last-token (step7) — all null; (3) ✅ sham-distribution protocol
-  (`MESE_SHAM=n`) implemented — run it on the flagged cells to close them out;
-  (4) independent human rating of a hard-set sample; (5) a second model for
-  generalization; (6) larger scales (> 4.0) with a fluency cost check.
+- **Conclusion.** On an 884-sentence, audit-gated dataset, a 1.5B model's mean-pooled
+  activations encode moral/affective tone with genuine held-out-template generalization
+  (grouped MLP 0.78–0.98, stable layers 12/14/16), and that readable structure is
+  nonlinear (grouped linear 0.46–0.66 ≈ chance). Yet activation steering does not
+  transfer that readable tone into generation: seven direction estimators — mean,
+  logistic, LDA, and the validated probe's own gradient in three variants — all move
+  tone no more than a random sham. **We do not stop at the null.** §4.0 shows the
+  failure is structural: for a two-layer probe, `∇f(x) ∈ rowspace(W₁)` at every point,
+  so any key derived from the probe by averaging is confined to a subspace it never
+  needed in order to *read*. On real activations the gradient keys sit at cos
+  0.845–0.982 with the plain mean difference, and `cos(logreg, mean) = +1.000` exactly,
+  so two of the seven "independent" keys are the same key. A 24-cell search over layers
+  {14,20,26} × {mean, last-token} pooling reproduces the null (permutation p = 0.438),
+  while last-token pooling *improves reading* (probe 0.99–1.00). Reading works; steering
+  with any probe-derived key this way cannot — and now we can say why, and demonstrate
+  the mechanism on a CPU with no model at all (`test_steering_collapse.py`).
+- **The claim we do not make.** Tone is not unsteerable. The confinement above is about
+  *probe-derived additive keys at one layer of a 1.5B model*. Sun et al. steer
+  Valence–Arousal successfully at 8–14B, and our own construction admits keys we never
+  tried (attention-weighted, multi-layer, or learned against a generation objective
+  rather than a probe).
+- **Next:** (1) ✅ observer grid; (2) ✅ probe-gradient key + its two non-point repairs,
+  ✅ layer sweep + last-token — all null, and all now explained by §4.0; (3) ✅
+  sham-distribution protocol (`MESE_SHAM=n`) implemented — run it to convert the
+  grid from a single-draw comparison into a real null-distribution test; (4) **the
+  scale rung**: 3B/8B, matched relative depth, unquantized — the one experiment that
+  decides between "structural" and "small-scale" (see §8b); (5) independent human
+  rating of a hard-set sample; (6) larger steering scales (> 4.0) with a fluency cost
+  check.
 
-## 8b. Concrete next experiment (why the steering null is worth pursuing)
-The null is an *absence of effect under a narrow method*, not evidence that tone is
-unsteerable. Because the readout is validated and nonlinear, a plausible cause is
-that tone lives in a *nonlinear* region of activation space that a single added
-mean-direction at one layer cannot reach. We have now tested the first three
-follow-ups — (a) the **probe-gradient** key, (b) a **layer sweep** {14, 20, 26},
-and (c) **last-token** steering — and all three fail:
+## 8b. The probes we tested, and why they all fail (now explained by §4.0)
+The null is an *absence of effect under a whole method family*, not evidence that tone
+is unsteerable — and §4.0 identifies which part is structural. Because the readout is
+validated and nonlinear, the natural hope was that tone lives in a *nonlinear* region
+of activation space that a single added mean-direction at one layer cannot reach. We
+tested four such follow-ups — (a) the **probe-gradient** key, (a′) its **path-averaged**
+and **class-averaged** repairs, (b) a **layer sweep** {14, 20, 26}, and (c) **last-token**
+steering — and all four fail:
 
 (a) the readout's own steepest ascent at the positive pole does not beat the sham,
 because in mean-pooled L2-normalized activations it collapses onto the linear mean
-direction (cos 0.85–0.98);
+direction (cos 0.845–0.982);
+(a′) the two obvious repairs do not help either: `probe-grad-path` and
+`probe-grad-class` sit at cos 0.995–1.000 with the point key, because averaging the
+Jacobian only rescales the per-unit gates (§4.0). We report this as a negative result on
+the method family rather than leaving the lever untested;
 (b)/(c) `step7_sweep.py` searches layers × {mean, last-token} pooling × axis with a
 per-cell probe, gate and sham. Reading improves (last-token probe 0.99–1.00), but
 the real−sham difference is +0.004 (permutation p = 0.438) and the direction that
@@ -358,8 +528,14 @@ draw makes a > +0.10 flag threshold noise-sensitive (the per-cell noise floor at
 20 generations/cell is ±0.2; a 24-cell grid then flags ~half the cells by chance).
 `step7_sweep.py` therefore supports `MESE_SHAM=n` to build a sham **distribution**
 and score each cell by a z-score (> 3) instead of one draw; `analyze_step7.py`
-reports the noise statistics. The remaining, still-untested lever:
-(d) scale up past 4.0 with a fluency cost check.
+reports the noise statistics. The remaining, still-untested lever is therefore **scale**,
+and §4.0 makes it a sharp test rather than a fishing trip: (d) run the identical protocol
+on a 3B/8B model at matched *relative* depth, **unquantized** so the activation geometry
+stays comparable. If the gradient keys stay confined there, the confinement is structural
+at every scale we can test; if they break away and steering starts to work, the boundary
+is a small-scale artifact and the mechanism needs a size term. Either outcome is a result
+— which is why this paper stops at one model and states a boundary rather than a
+universal.
 
 ## Appendix: Reproducibility
 - Data pipeline (no GPU needed): `dataset_templates.py` → `easy.csv`;
@@ -370,8 +546,14 @@ reports the noise statistics. The remaining, still-untested lever:
   test_probe_calibration.py` shows that a low-capacity control probe passes vacuously
   and calibrates what a linear probe can earn under this protocol (0.75 on a set that
   is linearly separable by construction); `python test_reading_controls.py` checks the
-  label-permutation and length-only controls against synthetic ground truth.
-  `probe_cv.py` holds the shared, model-free CV logic.
+  label-permutation and length-only controls against synthetic ground truth;
+  `python test_steering_collapse.py` verifies the §4.0 mechanism — that all three probe
+  gradient keys lie in `rowspace(W₁)` to machine precision (residual 0.000000) while
+  `mean` does not, that path- and class-averaging do not escape the point key
+  (cos 0.995–1.000), that on a *nonlinear* boundary the probe key points away from
+  `mean` (cos 0.39), and that a sham generator seeded with the caller's own seed
+  reproduces the ground-truth direction exactly. `probe_cv.py` holds the shared,
+  model-free CV logic and `steering_keys.py` the shared key estimators.
 - GPU experiments (Google Colab T4): `pilot.py`, `step2_probe.py`,
   `step3_rigorous.py`, `step4_steer.py`, `step5_robust.py`, `step6_steer_all.py`,
   `step7_sweep.py`.
@@ -385,6 +567,7 @@ reports the noise statistics. The remaining, still-untested lever:
   (305 s measured, QUICK mode), so wiring errors are caught before GPU time is spent.
   It logs to `results_step5_dry.txt` (never the real log) and, on noise, must print no
   `CONFOUND WARNING` / `LEAK WARNING` lines.
-- Portability: each experiment script checks up front that `dataset.py` / `probe_cv.py`
-  sit next to it and adds its own folder to `sys.path`, so a wrong working directory
-  stops with `MISSING FILE(S): ...` instead of a bare `ModuleNotFoundError`.
+- Portability: each experiment script checks up front that `dataset.py` / `probe_cv.py` /
+  `steering_keys.py` sit next to it and adds its own folder to `sys.path`, so a wrong
+  working directory stops with `MISSING FILE(S): ...` instead of a bare
+  `ModuleNotFoundError`.

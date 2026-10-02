@@ -16,6 +16,10 @@ remaining levers from paper §8b:
 For each (layer, pooling) cell and each axis we:
   - train the measuring probe AT THAT layer/pooling,
   - report its template-grouped held-out accuracy (gate >= MIN_PROBE_ACC),
+  - print WHERE EVERY STEERING KEY POINTS (cos vs `mean`, from steering_keys.py:
+    mean / logreg / lda / probe-grad / probe-grad-path / probe-grad-class /
+    random). This table costs NO generation and is the paper's mechanism
+    evidence (paper §4), so it is reported even for cells we do not steer,
   - steer with mean / probe-grad / sham(random) at scales {0, 1.5, 4},
   - measure tone with the SAME-layer probe (steer hook OFF) and report fluency.
 
@@ -49,7 +53,7 @@ except NameError:                              # pasted into a notebook cell
 for _p in (_HERE, os.getcwd()):
     if _p not in sys.path:
         sys.path.insert(0, _p)
-_REQUIRED = ["dataset.py"]
+_REQUIRED = ["dataset.py", "steering_keys.py"]
 _MISSING = [f for f in _REQUIRED
             if not any(os.path.exists(os.path.join(_p, f))
                        for _p in (_HERE, os.getcwd()))]
@@ -74,6 +78,7 @@ except ModuleNotFoundError:                    # dataset.py truly missing -> rea
 except ImportError:                            # older dataset.py without GROUPS
     from dataset import DATA
     GROUPS = None
+from steering_keys import all_keys, print_cos_table, unit
 
 print("CUDA:", torch.cuda.is_available())
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
@@ -245,9 +250,6 @@ def probe_cv_acc(Xa, y, groups, hidden=32, k=5):
         accs.append((pred == (y[te] > 0).long().cpu()).float().mean().item())
     return statistics.fmean(accs) if accs else float("nan")
 
-def unit(v):
-    return v / (v.norm() + 1e-8)
-
 # ---- CONTROLS for the READING claim (cheap, no generation) -------------------
 # A high grouped held-out accuracy only speaks about TONE if two things hold:
 #  (a) label-permutation: the identical CV on SHUFFLED labels collapses to ~0.50.
@@ -286,19 +288,12 @@ def control_acc(Xa, y, groups, se_act, kind, seeds=(0, 1, 2)):
             accs.append(probe_cv_acc(Xa, y[perm.to(y.device)], groups))
     return statistics.fmean(accs)
 
-# ---- ways to estimate the steering direction (at a given layer/pool) ----
-def dir_mean(Xa, y):
-    return Xa[y > 0].mean(dim=0) - Xa[y < 0].mean(dim=0)
-
-def dir_probe_grad(net, Xa, y):
-    """Supervised, nonlinear key: the measuring probe's input gradient at the
-    positive-pole mean (the steepest ascent of the READABLE structure)."""
-    dev = next(net.parameters()).device
-    pos = Xa.to(dev)[y > 0]
-    x0 = pos.mean(dim=0).detach().clone().requires_grad_(True)
-    logit = net(x0.unsqueeze(0)).squeeze(0)
-    (logit.sum()).backward()
-    return unit(x0.grad.detach())
+# ---- steering-direction keys ------------------------------------------------
+# All key estimators live in steering_keys.py (ONE definition, shared with
+# step6_steer_all.py and test_steering_collapse.py). `all_keys` returns all
+# seven: mean, logreg, lda, probe-grad, probe-grad-path, probe-grad-class,
+# random. The cosine table it feeds costs NO generation, so it is printed for
+# every cell even though only DIRECTIONS are actually steered.
 
 
 # ---- steering hook, parametrized by layer ----
@@ -396,16 +391,16 @@ for (L, p) in sorted(XMAT):
             CELLS[(L, p, ax_name)]["unmeasurable"] = ("-", "-")
             continue
         net = make_probe(Xa, y)
-        base = dir_mean(Xa, y)
-        real_dirs = {"mean": base, "probe-grad": dir_probe_grad(net, Xa, y)}
+        keys = all_keys(Xa, y, net)     # all 7 keys, unit-norm; `mean` first
+        print_cos_table(keys)           # §4 evidence: where each key POINTS (free)
+        base = keys["mean"]
+        real_dirs = {"mean": base, "probe-grad": keys["probe-grad"]}
         # SHAM: n random directions. n=1 reproduces step6's single-draw control;
         # n>=20 gives a null DISTRIBUTION so a cell can be scored (z-score) rather
         # than compared to one noisy draw.
         sham_keys = ["random"] if N_SHAM == 1 else [f"random{i}" for i in range(N_SHAM)]
         sham_dirs = {k: torch.randn_like(base) for k in sham_keys}
         all_dirs = {k: unit(v) for k, v in {**real_dirs, **sham_dirs}.items()}
-        print(f"    cos(probe-grad, mean) = "
-              f"{torch.nn.functional.cosine_similarity(all_dirs['probe-grad'].view(1,-1), all_dirs['mean'].view(1,-1)).item():+.3f}")
         if N_SHAM > 1:
             print(f"    [sham distribution: {N_SHAM} random directions]")
         run_names = [d for d in DIRECTIONS if d != "random"] + sham_keys

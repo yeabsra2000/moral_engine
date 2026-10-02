@@ -16,19 +16,35 @@ artifacts, and the repo now refuses to report them.
 
 ## Findings
 
-1. **Reading works — and the recoverable structure is nonlinear.** Template-grouped CV
-   MLP accuracy is **0.78–0.98** across layers 12/14/16, while a grouped *linear* probe
-   gets **0.46–0.66** (Arousal and Fairness at chance). `test_probe_calibration.py` shows
-   a synthetic set that is linearly separable *by construction* still earns only **0.75**
-   under this protocol, so the linear probe is not simply undertrained.
-2. **Steering is null, and the null survives a search.** Four direction estimators (mean,
-   logistic, LDA, and the probe's own gradient) across layers {14, 20, 26} × {mean,
-   last-token} pooling × 4 axes move tone no further than a random sham direction:
-   permutation **p = 0.438** over the whole 24-cell grid.
-3. **Two controls carry the result.** Random train/test splits are inflated to **0.76–0.93**
-   by template identity *alone* — so grouped CV is the honest protocol. And a reading is
-   only accepted if the length-only and label-permutation controls stay silent. Three
-   control-design traps were found and fixed along the way (see `results.md` M7).
+1. **Mechanism: every probe-based steering key is confined to one subspace.** For a
+   probe `f(x) = W₂·SiLU(W₁x + b₁) + b₂`, the input gradient at *any* point is
+   `W₁ᵀ·diag(SiLU′(W₁x + b₁))·W₂ᵀ`, which lies in `rowspace(W₁)`. So averaging it — at a
+   single point, along the μ⁻→μ⁺ path, or over the whole positive class — only rescales
+   the per-unit gates and cannot change where the key points. Measured: the three gradient
+   keys are mutually **cos 0.995–1.000**, and `cos(logreg, mean) = +1.000`, so `logreg`
+   is not an independent key either. `test_steering_collapse.py` confirms the containment
+   to machine precision (residual **0.000000**) with no model at all.
+2. **Reading works, and the recoverable structure is nonlinear.** Template-grouped CV MLP
+   accuracy is **0.78–0.98** across layers 12/14/16, while a grouped *linear* probe gets
+   **0.46–0.66** (Arousal and Fairness at chance). `test_probe_calibration.py` shows a
+   synthetic set that is linearly separable *by construction* still earns only **0.75**
+   under this protocol, so the linear probe is not merely undertrained. The axis is
+   therefore nonlinear *and* readable — but the keys in (1) cannot reach it.
+3. **Hence steering is null, and the null survives a search.** Seven keys across layers
+   {14, 20, 26} × {mean, last-token} pooling × 4 axes move tone no further than a random
+   sham direction: permutation **p = 0.438** over the whole 24-cell grid.
+4. **The collapse is contingent, not tautological — which is what makes it a finding.**
+   On a synthetic *nonlinear* boundary the probe key points well away from `mean`
+   (measured cos **0.39**) while still lying inside `rowspace(W₁)`. So the subspace theorem
+   explains why the probe keys coincide with *each other*; BCE training aligning `W₁` with
+   the class-separation direction is what explains why they coincide with `mean` on real
+   activations (0.85–0.98). Two separate claims — do not conflate them.
+5. **Two controls carry the result.** Random train/test splits are inflated to **0.76–0.93**
+   by template identity *alone* — so grouped CV is the honest protocol. A reading is only
+   accepted if the length-only and label-permutation controls stay silent. Three
+   control-design traps were found and fixed along the way (see `results.md` M7); a fourth
+   (a sham generator seeded with the caller's own seed reproduces the ground-truth
+   direction exactly) is guarded by `test_steering_collapse.py`.
 
 Full numbers, corrections and provenance: **`results.md`**. Write-up: **`paper.md`**.
 
@@ -38,6 +54,7 @@ Full numbers, corrections and provenance: **`results.md`**. Write-up: **`paper.m
 python test_grouped_cv.py          # fold invariants + template-memorization control
 python test_probe_calibration.py   # catches vacuous controls; calibrates the linear probe
 python test_reading_controls.py    # length/permutation controls vs synthetic ground truth
+python test_steering_collapse.py   # WHY probe-based steering cannot beat a sham (§4 mechanism)
 python check_length_control.py     # re-derives the length control (tokenizer only, no model)
 MESE_DRY=1 MESE_QUICK=1 python step5_robust.py   # end-to-end wiring check, no model (~5 min)
 ```
@@ -175,7 +192,9 @@ python dataset_merge.py --review dataset_review.csv   # merge only un-flagged ro
 | `dataset_hard.py` | curated hard set (surface-neutral concrete events, mirrored pairs) |
 | `dataset_merge.py` | merge + final gate -> `dataset.py` (`DATA`, `GROUPS`) |
 | `probe_cv.py` | model-free CV harness (random vs grouped) + template-identity control |
+| `steering_keys.py` | ONE definition of the steering-key family (mean/logreg/lda/probe-grad/-path/-class/random), shared by step6, step7 and `test_steering_collapse.py` |
 | `test_grouped_cv.py` | CPU self-test of the split logic and the memorization gap |
+| `test_steering_collapse.py` | CPU self-test of the §4 mechanism: the probe-gradient rowspace theorem, that `-path`/`-class` do NOT escape it, and the sham seed-collision trap |
 | `check_length_control.py` | CPU self-test (tokenizer only, no model): re-derives the length-only reading control at 10 seeds with its spread |
 | `step5_robust.py` | Observer results: random row, grouped row, template-identity control row, plus per-axis label-permutation + length-only controls |
 | `step6_steer_all.py` | Steerer results: measurability gate, 4 directions (incl. probe-grad), sham, fluency |

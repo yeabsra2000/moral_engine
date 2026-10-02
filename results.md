@@ -269,8 +269,10 @@ Consequences for the write-up (this supersedes earlier claims):
 - `step5_robust.py` now prints the random row, the grouped row, and the
   template-identity control for every layer/axis, so this can't be forgotten.
 - `step6_steer_all.py` now gates each axis on the measuring probe's grouped
-  held-out accuracy (>= 0.60), tries four direction estimators (mean / logistic / Fisher-LDA / probe-grad) plus a SHAM random direction at the same scale, because the
-  Step 6 null mixed up "steering failed" with "measurement is noise".
+  held-out accuracy (>= 0.60) and adds direction estimators (mean / logistic /
+  Fisher-LDA / probe-grad) plus a SHAM random direction at the same scale, because the
+  Step 6 null mixed up "steering failed" with "measurement is noise". (Extended in M8
+  to seven keys, including two non-point repairs of the probe gradient.)
 
 ## M7 — Probe calibration: two traps found while adding reading controls  ⚠️✅
 Found offline (`test_probe_calibration.py`, `test_reading_controls.py`; both ALL PASS,
@@ -445,6 +447,79 @@ Raw per-run values, `python check_length_control.py`.
    −0.31 @ L26). BUT reading improves with last-token pooling (grouped probe
    0.75–1.00 vs 0.63–0.99 mean). See the Step-7 section.
 
+## M8 — The steering-collapse mechanism (why the null is structural, not accidental)  ✅ NEW
+
+Added 2026-10-02. This is the paper's spine: §4.0 of `paper.md`. It is **GPU-free** —
+the identity is proved for the probe architecture and verified on CPU by
+`test_steering_collapse.py`, and the cosine table is pure vector math on activations
+the grid already captured.
+
+**The identity.** For the measuring probe `f(x) = W₂·SiLU(W₁x + b₁) + b₂` (the exact
+architecture in steps 5/6/7),
+
+    ∇f(x) = W₁ᵀ · diag( SiLU′(W₁x + b₁) ) · W₂ᵀ   ⟹   ∇f(x) ∈ rowspace(W₁) ∀x.
+
+Any key formed by **averaging** ∇f over a point set — one point (positive-pole mean),
+a path (μ⁻→μ⁺), or the whole positive class — is `W₁ᵀ·diag(ḡ)·W₂ᵀ`. Averaging can only
+re-weight the hidden units; it **cannot change where the key points**. So "probe-grad"
+is a linear functional of `W₁` that happens to sit inside a nonlinear probe.
+
+**Verified offline** (`test_steering_collapse.py`, CPU, no model — 17/17 checks pass):
+- fraction of each probe key lying *outside* `rowspace(W₁)`: **0.000000** (all three
+  variants), vs **0.331** for the plain `mean` key → the containment is specific to
+  gradient keys and is not vacuous.
+- pairwise cos among `probe-grad` / `probe-grad-path` / `probe-grad-class`:
+  **0.9985 / 1.0000 / 0.9985** → path- and class-averaging do **not** escape the point
+  key (the "you only tried a point gradient" objection is closed in advance).
+- on a *nonlinear* synthetic boundary the probe key points well away from `mean`
+  (**cos 0.392**, vs 0.840 on the linear rule) while still inside `rowspace(W₁)` →
+  the collapse onto `mean` on real data is **contingent** (BCE aligning `W₁` with the
+  class-separation direction), *not* a consequence of the theorem alone. Keeping these
+  two claims separate is what makes the finding non-tautological.
+
+**On the real model** (from the committed `results_step6*.txt`, layer 14 / mean pooling —
+unchanged by the `steering_keys.py` refactor, which preserves the arithmetic exactly):
+
+| Axis | probe acc | cos(logreg, mean) | cos(lda, mean) | cos(probe-grad, mean) | cos(sham, mean) |
+|---|---:|---:|---:|---:|---:|
+| Valence | 0.72 | +1.000 | +0.731 | +0.982 | +0.009 |
+| Arousal | 0.81 | +1.000 | +0.704 | +0.964 | −0.016 |
+| Care/Harm | 0.98 | +1.000 | +0.429 | +0.960 | −0.055 |
+| Fairness | 0.66 | +1.000 | +0.493 | +0.845 | −0.030 |
+
+Across the 24 step7 cells `cos(probe-grad, mean)` = 0.72–0.98. Two consequences:
+1. **`logreg` is not an independent key** — `cos(logreg, mean) = +1.000` exactly on all
+   four axes (features are L2-normalized per row, classes balanced, so the BCE optimum
+   lies on the mean-difference direction). Counting "mean" and "logreg" as two
+   directions double-counts one of them.
+2. **The better the probe reads, the harder its gradient collapses.** Care/Harm (best
+   read, 0.98) is the most confined (0.960); Fairness (worst read, 0.66) the least
+   (0.845). A more readable axis is a more linearly-separable one, and a point gradient
+   on a linearly-separable problem is a linear discriminant by construction.
+
+**Fourth control trap found while building this** (extends the three in M7): seeding a
+sham generator with the *same* seed the caller used for the ground-truth direction
+reproduces that direction **exactly** (`cos = +1.000`) — i.e. a "random" control that
+*is* the answer. `steering_keys.py` now uses a distinctive `DEFAULT_SHAM_SEED` and
+`test_steering_collapse.py` asserts the sham stays orthogonal (≤ 0.20).
+
+**What changed in the code:**
+- new `steering_keys.py` — ONE definition of the key family (mean / logreg / lda /
+  probe-grad / probe-grad-path / probe-grad-class / random), shared by step6, step7
+  and the new test. `dir_mean`/`dir_probe_grad` were duplicated in step6 and step7
+  before; that duplication is removed.
+- `step6_steer_all.py` and `step7_sweep.py` now print the **full cosine table** for
+  every axis / cell, not just `probe-grad`. Cost measured at the real hidden size
+  (d=1536): **2.8 s per call → 11 s for step6's 4 axes, ~67 s for step7's 24 cells**,
+  i.e. negligible, and it needs no generation at all.
+- key names widened to 16 chars in step6's summary so `probe-grad-class` does not
+  break the table alignment.
+
+**What this means for the paper:** the RQ3 steering null is no longer an unexplained
+empirical failure. Every probe-derived key is confined to the subspace a probe never
+needed in order to *read* — which is precisely the gap between a readout and a
+direction for control. The remaining open question is **scale** (see the TODO below),
+and it is now a sharp test rather than a fishing trip.
 ## TODO (before the final table in the paper)
 - ✅ DONE: full Observer grid captured (REPS=10, layers 12/14/16) — `results_step5 (1).txt`.
 - ✅ DONE: probe-grad direction tested in step6 — also null (stronger null).
@@ -459,8 +534,37 @@ Raw per-run values, `python check_length_control.py`.
   "suggestive". The mean-pooled controls have already run — see M6.
 - Optional follow-up (not blocking): attention-weighted pooling could raise the
   linear probe above chance and is listed as future work, not a blocking gap.
+- 🔵 **THE SCALE RUNG (the one experiment that decides "structural" vs "small-scale").**
+  Run the identical protocol on a second, larger model at matched *relative* depth.
+  `steering_keys.py` makes this cheap: the key-position cosine table (the §4.0 evidence)
+  needs no generation, so `MESE_LAYERS=… MESE_AXES=0 python step7_sweep.py` on an 8B
+  model already yields the mechanism check in minutes.
+  - **Do NOT quantize to fit.** 4-bit changes the activation geometry, which is the
+    object of study, so a quantized 8B would confound the very comparison we want.
+  - **VRAM reality (bf16 weights):** ~3.1 GB (1.5B) / ~6.2 GB (3B) / ~16 GB (8B).
+    A Colab **T4 (16 GB) fits 1.5B and 3B but NOT 8B** — `device_map="auto"` would
+    silently offload 8B to CPU and wreck activation capture. Use **L4 (24 GB)** or
+    A100 for the 8B rung; if only a T4 is available, run the **1.5B → 3B ladder**
+    instead (weaker bracket, but unconfounded).
+  - **Model + layers** (relative depth ~50%, matching the 1.5B's layer 14 of 28):
+    1.5B (28 L) → `14,20,26` ✅ have · 3B (36 L) → `18,26,33` · Llama-3.1-8B (32 L) →
+    `16,23,30` or Qwen2.5-7B (28 L) → `14,21,26`. Prefer a model Sun et al. used, for
+    direct comparability.
+  - **Per rung:** `step5_robust.py`, `step6_steer_all.py`, `step7_sweep.py`, plus
+    `MESE_SHAM=20` so cells get a z-score vs a null *distribution* rather than one draw.
+  - **Pass condition for the paper:** if the gradient keys stay confined (cos ≳ 0.9 with
+    `mean`) at 3B/8B, the confinement is structural at every scale we can test; if they
+    break away and steering starts to work, the boundary is a small-scale artifact and
+    the mechanism needs a size term. Either outcome is a result.
 
 ## Current paper evidence summary (CORRECTED — final CUDA numbers are in)
+0. **Mechanism (M8, the paper's spine):** every probe-derived steering key lies in
+   `rowspace(W₁)` by construction, so mean/logreg/LDA/probe-grad/-path/-class cannot
+   leave the subspace the probe used to *read*; on real activations the gradient keys
+   collapse onto `mean` (cos 0.845–0.982) and `cos(logreg, mean) = +1.000` exactly.
+   Verified offline to machine precision. The RQ3 null is therefore a *prediction* of
+   the method family, not an unexplained failure — and the collapse's contingency is
+   shown on synthetic nonlinear data (cos 0.392 there), so it is not a tautology.
 1. Observer: tone is decodable from held-out templates (grouped MLP 0.78–0.98)
    and the readable structure is nonlinear (grouped linear ≈ chance, 0.46–0.66).
    Reported against a template-identity control; grouped CV is the honest protocol.
