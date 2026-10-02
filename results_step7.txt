@@ -1,0 +1,294 @@
+
+===== step7 run 2026-09-28 15:51:05 quick=True =====
+[log] writing to results_step7.txt  |  QUICK=True
+layers=[14]  pools=['mean']  axes=['Valence']
+(prompts=2, samples=1, scales=[0.0, 4.0], directions=['mean', 'random'])
+Full sweep: ~45-90 min on a T4 (trim with MESE_LAYERS / MESE_POOL). QUICK: ~3-5 min.
+
+capturing activations at layers [14] ...
+  200/884 sentences captured
+  400/884 sentences captured
+  600/884 sentences captured
+  800/884 sentences captured
+  built 1 activation matrices of shape torch.Size([884, 1536])
+
+==============================================================================
+step7 SEARCH: layer sweep x token-pooling x axis
+tone in -1..1 (measured with the steer hook OFF); fluency = mean per-token logp.
+Measuring-probe gate: template-grouped held-out accuracy must be >= 0.6.
+A 'real steer' = a real direction's slope clearly ABOVE the SHAM (random) slope.
+==============================================================================
+
+################ LAYER 14  |  POOL mean ################
+
+### L14 mean Valence: 176 sentences (88 pos / 88 neg), 32 groups
+    measuring probe held-out accuracy = 0.72   (gate 0.6)
+    cos(probe-grad, mean) = +0.982
+    cos(    random, mean) = +0.009
+  [      mean] tone  0.0=+0.13  4.0=-0.00   slope=-0.13   fluency=-2.33
+  [    random] tone  0.0=-0.12  4.0=+0.07   slope=+0.19   fluency=-2.07
+
+==============================================================================
+GRID SUMMARY   (slope = tone@max - tone@0; 'random' is the SHAM control)
+layer  pool axis       probe   mean probe-grad   SHAM   verdict
+   14  mean Valence     0.72  -0.13          -  +0.19   null
+
+Cells clearing the sham by > +0.10: 0 / 1 measurable cells.
+=> The step6 null HOLDS across every layer/pooling searched: readable but
+   not steerable by residual-stream addition, even with a supervised key.
+
+===== step7 run 2026-09-28 15:53:06 quick=False =====
+[log] writing to results_step7.txt  |  QUICK=False
+layers=[14, 20, 26]  pools=['mean', 'last']  axes=['Valence', 'Arousal', 'Care/Harm', 'Fairness']
+(prompts=5, samples=4, scales=[0.0, 1.5, 4.0], directions=['mean', 'probe-grad', 'random'])
+Full sweep: ~45-90 min on a T4 (trim with MESE_LAYERS / MESE_POOL). QUICK: ~3-5 min.
+
+capturing activations at layers [14, 20, 26] ...
+  200/884 sentences captured
+  400/884 sentences captured
+  600/884 sentences captured
+  800/884 sentences captured
+  built 6 activation matrices of shape torch.Size([884, 1536])
+
+==============================================================================
+step7 SEARCH: layer sweep x token-pooling x axis
+tone in -1..1 (measured with the steer hook OFF); fluency = mean per-token logp.
+Measuring-probe gate: template-grouped held-out accuracy must be >= 0.6.
+A 'real steer' = a real direction's slope clearly ABOVE the SHAM (random) slope.
+==============================================================================
+
+################ LAYER 14  |  POOL last ################
+
+### L14 last Valence: 176 sentences (88 pos / 88 neg), 32 groups
+    measuring probe held-out accuracy = 0.99   (gate 0.6)
+    cos(probe-grad, mean) = +0.869
+    cos(    random, mean) = +0.013
+  [      mean] tone  0.0=+0.25  1.5=-0.01  4.0=+0.16   slope=-0.08   fluency=-2.57
+  [probe-grad] tone  0.0=+0.07  1.5=+0.25  4.0=+0.22   slope=+0.14   fluency=-2.55
+  [    random] tone  0.0=+0.16  1.5=+0.26  4.0=+0.13   slope=-0.03   fluency=-2.53
+
+### L14 last Arousal: 136 sentences (68 pos / 68 neg), 28 groups
+    measuring probe held-out accuracy = 0.82   (gate 0.6)
+    cos(probe-grad, mean) = +0.853
+    cos(    random, mean) = -0.008
+  [      mean] tone  0.0=-0.19  1.5=-0.16  4.0=-0.25   slope=-0.06   fluency=-2.45
+  [probe-grad] tone  0.0=-0.19  1.5=-0.29  4.0=-0.06   slope=+0.13   fluency=-2.51
+  [    random] tone  0.0=+0.01  1.5=-0.38  4.0=-0.05   slope=-0.07   fluency=-2.43
+
+### L14 last Care/Harm: 436 sentences (218 pos / 218 neg), 58 groups
+    measuring probe held-out accuracy = 0.99   (gate 0.6)
+    cos(probe-grad, mean) = +0.831
+    cos(    random, mean) = +0.041
+  [      mean] tone  0.0=+0.11  1.5=+0.01  4.0=+0.05   slope=-0.05   fluency=-2.50
+  [probe-grad] tone  0.0=-0.00  1.5=+0.11  4.0=-0.05   slope=-0.05   fluency=-2.53
+  [    random] tone  0.0=-0.01  1.5=+0.06  4.0=+0.09   slope=+0.10   fluency=-2.58
+
+### L14 last Fairness: 136 sentences (68 pos / 68 neg), 28 groups
+    measuring probe held-out accuracy = 0.76   (gate 0.6)
+    cos(probe-grad, mean) = +0.724
+    cos(    random, mean) = -0.016
+  [      mean] tone  0.0=-0.30  1.5=-0.24  4.0=-0.22   slope=+0.08   fluency=-2.55
+  [probe-grad] tone  0.0=-0.11  1.5=-0.14  4.0=-0.13   slope=-0.02   fluency=-2.62
+  [    random] tone  0.0=-0.15  1.5=-0.25  4.0=-0.28   slope=-0.12   fluency=-2.49
+
+################ LAYER 14  |  POOL mean ################
+
+### L14 mean Valence: 176 sentences (88 pos / 88 neg), 32 groups
+    measuring probe held-out accuracy = 0.78   (gate 0.6)
+    cos(probe-grad, mean) = +0.981
+    cos(    random, mean) = +0.007
+  [      mean] tone  0.0=-0.01  1.5=-0.04  4.0=+0.03   slope=+0.04   fluency=-2.62
+  [probe-grad] tone  0.0=+0.02  1.5=+0.07  4.0=+0.04   slope=+0.02   fluency=-2.53
+  [    random] tone  0.0=-0.01  1.5=-0.02  4.0=-0.02   slope=-0.01   fluency=-2.49
+
+### L14 mean Arousal: 136 sentences (68 pos / 68 neg), 28 groups
+    measuring probe held-out accuracy = 0.82   (gate 0.6)
+    cos(probe-grad, mean) = +0.965
+    cos(    random, mean) = -0.003
+  [      mean] tone  0.0=-0.15  1.5=-0.10  4.0=-0.05   slope=+0.09   fluency=-2.53
+  [probe-grad] tone  0.0=-0.09  1.5=-0.13  4.0=-0.10   slope=-0.01   fluency=-2.50
+  [    random] tone  0.0=-0.07  1.5=-0.06  4.0=-0.06   slope=+0.00   fluency=-2.52
+
+### L14 mean Care/Harm: 436 sentences (218 pos / 218 neg), 58 groups
+    measuring probe held-out accuracy = 0.98   (gate 0.6)
+    cos(probe-grad, mean) = +0.962
+    cos(    random, mean) = +0.006
+  [      mean] tone  0.0=-0.07  1.5=-0.08  4.0=-0.09   slope=-0.02   fluency=-2.58
+  [probe-grad] tone  0.0=-0.12  1.5=-0.10  4.0=-0.10   slope=+0.02   fluency=-2.56
+  [    random] tone  0.0=-0.10  1.5=-0.16  4.0=-0.09   slope=+0.01   fluency=-2.48
+
+### L14 mean Fairness: 136 sentences (68 pos / 68 neg), 28 groups
+    measuring probe held-out accuracy = 0.68   (gate 0.6)
+    cos(probe-grad, mean) = +0.836
+    cos(    random, mean) = -0.019
+  [      mean] tone  0.0=+0.03  1.5=+0.13  4.0=+0.08   slope=+0.05   fluency=-2.48
+  [probe-grad] tone  0.0=+0.13  1.5=+0.03  4.0=+0.08   slope=-0.04   fluency=-2.54
+  [    random] tone  0.0=+0.06  1.5=+0.06  4.0=+0.05   slope=-0.00   fluency=-2.60
+
+################ LAYER 20  |  POOL last ################
+
+### L20 last Valence: 176 sentences (88 pos / 88 neg), 32 groups
+    measuring probe held-out accuracy = 0.99   (gate 0.6)
+    cos(probe-grad, mean) = +0.866
+    cos(    random, mean) = +0.024
+  [      mean] tone  0.0=+0.24  1.5=+0.27  4.0=+0.27   slope=+0.03   fluency=-2.45
+  [probe-grad] tone  0.0=+0.30  1.5=+0.42  4.0=+0.39   slope=+0.09   fluency=-2.53
+  [    random] tone  0.0=+0.19  1.5=+0.34  4.0=+0.23   slope=+0.03   fluency=-2.52
+
+### L20 last Arousal: 136 sentences (68 pos / 68 neg), 28 groups
+    measuring probe held-out accuracy = 0.87   (gate 0.6)
+    cos(probe-grad, mean) = +0.857
+    cos(    random, mean) = -0.026
+  [      mean] tone  0.0=-0.02  1.5=-0.05  4.0=-0.09   slope=-0.07   fluency=-2.54
+  [probe-grad] tone  0.0=-0.13  1.5=+0.05  4.0=-0.16   slope=-0.03   fluency=-2.58
+  [    random] tone  0.0=-0.02  1.5=+0.06  4.0=-0.25   slope=-0.22   fluency=-2.62
+
+### L20 last Care/Harm: 436 sentences (218 pos / 218 neg), 58 groups
+    measuring probe held-out accuracy = 1.00   (gate 0.6)
+    cos(probe-grad, mean) = +0.833
+    cos(    random, mean) = -0.009
+  [      mean] tone  0.0=-0.26  1.5=-0.31  4.0=-0.36   slope=-0.10   fluency=-2.54
+  [probe-grad] tone  0.0=-0.44  1.5=-0.34  4.0=-0.19   slope=+0.25   fluency=-2.43
+  [    random] tone  0.0=-0.34  1.5=-0.24  4.0=-0.24   slope=+0.11   fluency=-2.53
+
+### L20 last Fairness: 136 sentences (68 pos / 68 neg), 28 groups
+    measuring probe held-out accuracy = 0.79   (gate 0.6)
+    cos(probe-grad, mean) = +0.715
+    cos(    random, mean) = -0.000
+  [      mean] tone  0.0=-0.38  1.5=-0.30  4.0=-0.52   slope=-0.14   fluency=-2.54
+  [probe-grad] tone  0.0=-0.41  1.5=-0.26  4.0=-0.27   slope=+0.14   fluency=-2.58
+  [    random] tone  0.0=-0.31  1.5=-0.28  4.0=-0.32   slope=-0.01   fluency=-2.54
+
+################ LAYER 20  |  POOL mean ################
+
+### L20 mean Valence: 176 sentences (88 pos / 88 neg), 32 groups
+    measuring probe held-out accuracy = 0.82   (gate 0.6)
+    cos(probe-grad, mean) = +0.973
+    cos(    random, mean) = +0.012
+  [      mean] tone  0.0=+0.03  1.5=+0.14  4.0=+0.14   slope=+0.11   fluency=-2.46
+  [probe-grad] tone  0.0=+0.06  1.5=+0.00  4.0=+0.18   slope=+0.13   fluency=-2.48
+  [    random] tone  0.0=+0.10  1.5=+0.15  4.0=+0.22   slope=+0.12   fluency=-2.50
+
+### L20 mean Arousal: 136 sentences (68 pos / 68 neg), 28 groups
+    measuring probe held-out accuracy = 0.93   (gate 0.6)
+    cos(probe-grad, mean) = +0.953
+    cos(    random, mean) = -0.014
+  [      mean] tone  0.0=+0.06  1.5=+0.06  4.0=+0.02   slope=-0.04   fluency=-2.45
+  [probe-grad] tone  0.0=-0.02  1.5=+0.03  4.0=+0.12   slope=+0.14   fluency=-2.52
+  [    random] tone  0.0=+0.05  1.5=+0.11  4.0=+0.03   slope=-0.01   fluency=-2.53
+
+### L20 mean Care/Harm: 436 sentences (218 pos / 218 neg), 58 groups
+    measuring probe held-out accuracy = 0.99   (gate 0.6)
+    cos(probe-grad, mean) = +0.958
+    cos(    random, mean) = -0.029
+  [      mean] tone  0.0=-0.19  1.5=-0.16  4.0=-0.17   slope=+0.02   fluency=-2.52
+  [probe-grad] tone  0.0=-0.12  1.5=-0.15  4.0=-0.18   slope=-0.06   fluency=-2.50
+  [    random] tone  0.0=-0.19  1.5=-0.18  4.0=-0.11   slope=+0.07   fluency=-2.58
+
+### L20 mean Fairness: 136 sentences (68 pos / 68 neg), 28 groups
+    measuring probe held-out accuracy = 0.63   (gate 0.6)
+    cos(probe-grad, mean) = +0.817
+    cos(    random, mean) = -0.025
+  [      mean] tone  0.0=+0.02  1.5=+0.10  4.0=+0.14   slope=+0.12   fluency=-2.63
+  [probe-grad] tone  0.0=+0.10  1.5=+0.07  4.0=+0.11   slope=+0.01   fluency=-2.65
+  [    random] tone  0.0=+0.13  1.5=+0.07  4.0=+0.18   slope=+0.05   fluency=-2.39
+
+################ LAYER 26  |  POOL last ################
+
+### L26 last Valence: 176 sentences (88 pos / 88 neg), 32 groups
+    measuring probe held-out accuracy = 0.99   (gate 0.6)
+    cos(probe-grad, mean) = +0.878
+    cos(    random, mean) = -0.014
+  [      mean] tone  0.0=-0.08  1.5=-0.08  4.0=-0.40   slope=-0.32   fluency=-2.41
+  [probe-grad] tone  0.0=-0.23  1.5=-0.28  4.0=-0.07   slope=+0.16   fluency=-2.46
+  [    random] tone  0.0=-0.20  1.5=-0.23  4.0=-0.19   slope=+0.01   fluency=-2.55
+
+### L26 last Arousal: 136 sentences (68 pos / 68 neg), 28 groups
+    measuring probe held-out accuracy = 0.88   (gate 0.6)
+    cos(probe-grad, mean) = +0.854
+    cos(    random, mean) = -0.014
+  [      mean] tone  0.0=-0.59  1.5=-0.46  4.0=-0.45   slope=+0.14   fluency=-2.42
+  [probe-grad] tone  0.0=-0.53  1.5=-0.50  4.0=-0.48   slope=+0.05   fluency=-2.55
+  [    random] tone  0.0=-0.68  1.5=-0.67  4.0=-0.60   slope=+0.08   fluency=-2.46
+
+### L26 last Care/Harm: 436 sentences (218 pos / 218 neg), 58 groups
+    measuring probe held-out accuracy = 0.99   (gate 0.6)
+    cos(probe-grad, mean) = +0.814
+    cos(    random, mean) = -0.015
+  [      mean] tone  0.0=-0.09  1.5=+0.02  4.0=-0.15   slope=-0.06   fluency=-2.49
+  [probe-grad] tone  0.0=-0.03  1.5=-0.03  4.0=-0.34   slope=-0.31   fluency=-2.54
+  [    random] tone  0.0=-0.29  1.5=-0.06  4.0=-0.22   slope=+0.07   fluency=-2.46
+
+### L26 last Fairness: 136 sentences (68 pos / 68 neg), 28 groups
+    measuring probe held-out accuracy = 0.75   (gate 0.6)
+    cos(probe-grad, mean) = +0.640
+    cos(    random, mean) = +0.024
+  [      mean] tone  0.0=+0.07  1.5=-0.07  4.0=+0.23   slope=+0.16   fluency=-2.43
+  [probe-grad] tone  0.0=+0.07  1.5=+0.08  4.0=+0.20   slope=+0.13   fluency=-2.65
+  [    random] tone  0.0=+0.16  1.5=+0.04  4.0=+0.14   slope=-0.01   fluency=-2.54
+
+################ LAYER 26  |  POOL mean ################
+
+### L26 mean Valence: 176 sentences (88 pos / 88 neg), 32 groups
+    measuring probe held-out accuracy = 0.88   (gate 0.6)
+    cos(probe-grad, mean) = +0.932
+    cos(    random, mean) = +0.029
+  [      mean] tone  0.0=+0.30  1.5=+0.26  4.0=+0.06   slope=-0.24   fluency=-2.55
+  [probe-grad] tone  0.0=+0.17  1.5=+0.14  4.0=+0.26   slope=+0.09   fluency=-2.47
+  [    random] tone  0.0=+0.19  1.5=+0.01  4.0=+0.15   slope=-0.04   fluency=-2.52
+
+### L26 mean Arousal: 136 sentences (68 pos / 68 neg), 28 groups
+    measuring probe held-out accuracy = 0.90   (gate 0.6)
+    cos(probe-grad, mean) = +0.906
+    cos(    random, mean) = -0.014
+  [      mean] tone  0.0=+0.04  1.5=+0.01  4.0=-0.06   slope=-0.10   fluency=-2.52
+  [probe-grad] tone  0.0=+0.00  1.5=-0.09  4.0=+0.08   slope=+0.07   fluency=-2.65
+  [    random] tone  0.0=+0.04  1.5=+0.05  4.0=-0.04   slope=-0.08   fluency=-2.45
+
+### L26 mean Care/Harm: 436 sentences (218 pos / 218 neg), 58 groups
+    measuring probe held-out accuracy = 0.98   (gate 0.6)
+    cos(probe-grad, mean) = +0.923
+    cos(    random, mean) = -0.014
+  [      mean] tone  0.0=-0.38  1.5=-0.38  4.0=-0.39   slope=-0.01   fluency=-2.51
+  [probe-grad] tone  0.0=-0.28  1.5=-0.45  4.0=-0.37   slope=-0.10   fluency=-2.48
+  [    random] tone  0.0=-0.31  1.5=-0.32  4.0=-0.34   slope=-0.03   fluency=-2.46
+
+### L26 mean Fairness: 136 sentences (68 pos / 68 neg), 28 groups
+    measuring probe held-out accuracy = 0.65   (gate 0.6)
+    cos(probe-grad, mean) = +0.552
+    cos(    random, mean) = -0.019
+  [      mean] tone  0.0=-0.02  1.5=-0.07  4.0=-0.02   slope=-0.00   fluency=-2.47
+  [probe-grad] tone  0.0=-0.06  1.5=-0.14  4.0=-0.05   slope=+0.00   fluency=-2.49
+  [    random] tone  0.0=-0.18  1.5=-0.05  4.0=-0.05   slope=+0.13   fluency=-2.50
+
+==============================================================================
+GRID SUMMARY   (slope = tone@max - tone@0; 'random' is the SHAM control)
+layer  pool axis       probe   mean probe-grad   SHAM   verdict
+   14  last Arousal     0.82  -0.06      +0.13  -0.07   *** POSSIBLE EFFECT (best=probe-grad)
+   14  last Care/Harm   0.99  -0.05      -0.05  +0.10   null
+   14  last Fairness    0.76  +0.08      -0.02  -0.12   *** POSSIBLE EFFECT (best=mean)
+   14  last Valence     0.99  -0.08      +0.14  -0.03   *** POSSIBLE EFFECT (best=probe-grad)
+   14  mean Arousal     0.82  +0.09      -0.01  +0.00   null
+   14  mean Care/Harm   0.98  -0.02      +0.02  +0.01   null
+   14  mean Fairness    0.68  +0.05      -0.04  -0.00   null
+   14  mean Valence     0.78  +0.04      +0.02  -0.01   null
+   20  last Arousal     0.87  -0.07      -0.03  -0.22   *** POSSIBLE EFFECT (best=probe-grad)
+   20  last Care/Harm   1.00  -0.10      +0.25  +0.11   *** POSSIBLE EFFECT (best=probe-grad)
+   20  last Fairness    0.79  -0.14      +0.14  -0.01   *** POSSIBLE EFFECT (best=probe-grad)
+   20  last Valence     0.99  +0.03      +0.09  +0.03   null
+   20  mean Arousal     0.93  -0.04      +0.14  -0.01   *** POSSIBLE EFFECT (best=probe-grad)
+   20  mean Care/Harm   0.99  +0.02      -0.06  +0.07   null
+   20  mean Fairness    0.63  +0.12      +0.01  +0.05   null
+   20  mean Valence     0.82  +0.11      +0.13  +0.12   null
+   26  last Arousal     0.88  +0.14      +0.05  +0.08   null
+   26  last Care/Harm   0.99  -0.06      -0.31  +0.07   null
+   26  last Fairness    0.75  +0.16      +0.13  -0.01   *** POSSIBLE EFFECT (best=mean)
+   26  last Valence     0.99  -0.32      +0.16  +0.01   *** POSSIBLE EFFECT (best=probe-grad)
+   26  mean Arousal     0.90  -0.10      +0.07  -0.08   *** POSSIBLE EFFECT (best=probe-grad)
+   26  mean Care/Harm   0.98  -0.01      -0.10  -0.03   null
+   26  mean Fairness    0.65  -0.00      +0.00  +0.13   null
+   26  mean Valence     0.88  -0.24      +0.09  -0.04   *** POSSIBLE EFFECT (best=probe-grad)
+
+Cells clearing the sham by > +0.10: 11 / 24 measurable cells.
+=> At least one cell cleared the sham: inspect those rows and re-run at the
+   winning (layer, pooling) with more prompts/samples/scales before claiming.

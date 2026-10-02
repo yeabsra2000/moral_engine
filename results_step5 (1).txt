@@ -1,0 +1,98 @@
+
+===== step5 run 2026-09-28 11:35:09 quick=True =====
+[log] writing to results_step5.txt  |  QUICK=True (REPS=3, layers=[14])
+Full run: ~15-25 min on a T4. QUICK run: ~2-4 min.
+==============================================================================
+Repeated 3x5-fold CV. Chance = 0.50. Accuracy = mean +- 2*SE.
+  RANDOM : sentences split independently (near-duplicate templates can
+           land in both train and test -> optimistic)
+  GROUPED: a whole template/motif is held out (honest generalization)
+==============================================================================
+--- layer 14 ---
+  Valence    [ random] n=176  MLP=0.92 +/- 0.00   linear=0.81   MLP wins 100%
+  Valence    [grouped] n=176  MLP=0.84 +/- 0.17   linear=0.59   MLP wins 100%
+  Valence               template-memorization gap = +0.09
+  Valence               template-identity CONTROL (random split) = 0.82  ->  real signal above control = +0.11
+  Arousal    [ random] n=136  MLP=0.95 +/- 0.00   linear=0.91   MLP wins 100%
+  Arousal    [grouped] n=136  MLP=0.72 +/- 0.15   linear=0.34   MLP wins 100%
+  Arousal               template-memorization gap = +0.23
+  Arousal               template-identity CONTROL (random split) = 0.77  ->  real signal above control = +0.18
+  Care/Harm  [ random] n=436  MLP=0.97 +/- 0.00   linear=0.97   MLP wins 33%
+  Care/Harm  [grouped] n=436  MLP=0.98 +/- 0.00   linear=0.59   MLP wins 100%
+  Care/Harm             template-memorization gap = -0.01
+  Care/Harm             template-identity CONTROL (random split) = 0.92  ->  real signal above control = +0.05
+  Fairness   [ random] n=136  MLP=0.94 +/- 0.01   linear=0.91   MLP wins 100%
+  Fairness   [grouped] n=136  MLP=0.79 +/- 0.03   linear=0.46   MLP wins 100%
+  Fairness              template-memorization gap = +0.15
+  Fairness              template-identity CONTROL (random split) = 0.76  ->  real signal above control = +0.17
+==============================================================================
+Read the GROUPED row as the honest accuracy, and the CONTROL row as the
+accuracy that pure template identity already buys under a random split.
+Defensible = GROUPED mean clearly above 0.50 with a small spread AND the
+random-split number clearly above its own template-identity control.
+
+===== step5 run 2026-09-28 12:32:38 quick=False =====
+[log] writing to results_step5.txt  |  QUICK=False (REPS=10, layers=[12, 14, 16])
+Full run: ~15-25 min on a T4. QUICK run: ~2-4 min.
+==============================================================================
+Repeated 10x5-fold CV. Chance = 0.50. Accuracy = mean +- 2*SE.
+  RANDOM : sentences split independently (near-duplicate templates can
+           land in both train and test -> optimistic)
+  GROUPED: a whole template/motif is held out (honest generalization)
+==============================================================================
+--- layer 12 ---
+  Valence    [ random] n=176  MLP=0.92 +/- 0.01   linear=0.85   MLP wins 100%
+  Valence    [grouped] n=176  MLP=0.83 +/- 0.07   linear=0.55   MLP wins 100%
+  Valence               template-memorization gap = +0.09
+  Valence               template-identity CONTROL (random split) = 0.83  ->  real signal above control = +0.09
+  Arousal    [ random] n=136  MLP=0.94 +/- 0.01   linear=0.90   MLP wins 100%
+  Arousal    [grouped] n=136  MLP=0.84 +/- 0.07   linear=0.46   MLP wins 100%
+  Arousal               template-memorization gap = +0.10
+  Arousal               template-identity CONTROL (random split) = 0.77  ->  real signal above control = +0.18
+  Care/Harm  [ random] n=436  MLP=0.97 +/- 0.00   linear=0.96   MLP wins 70%
+  Care/Harm  [grouped] n=436  MLP=0.98 +/- 0.00   linear=0.64   MLP wins 100%
+  Care/Harm             template-memorization gap = -0.01
+  Care/Harm             template-identity CONTROL (random split) = 0.93  ->  real signal above control = +0.04
+  Fairness   [ random] n=136  MLP=0.92 +/- 0.00   linear=0.91   MLP wins 60%
+  Fairness   [grouped] n=136  MLP=0.78 +/- 0.02   linear=0.46   MLP wins 100%
+  Fairness              template-memorization gap = +0.14
+  Fairness              template-identity CONTROL (random split) = 0.77  ->  real signal above control = +0.15
+--- layer 14 ---
+  Valence    [ random] n=176  MLP=0.92 +/- 0.01   linear=0.84   MLP wins 100%
+  Valence    [grouped] n=176  MLP=0.82 +/- 0.06   linear=0.54   MLP wins 100%
+  Valence               template-memorization gap = +0.10
+  Valence               template-identity CONTROL (random split) = 0.83  ->  real signal above control = +0.10
+  Arousal    [ random] n=136  MLP=0.94 +/- 0.01   linear=0.90   MLP wins 100%
+  Arousal    [grouped] n=136  MLP=0.83 +/- 0.07   linear=0.46   MLP wins 100%
+  Arousal               template-memorization gap = +0.10
+  Arousal               template-identity CONTROL (random split) = 0.77  ->  real signal above control = +0.17
+  Care/Harm  [ random] n=436  MLP=0.97 +/- 0.00   linear=0.97   MLP wins 20%
+  Care/Harm  [grouped] n=436  MLP=0.98 +/- 0.00   linear=0.65   MLP wins 100%
+  Care/Harm             template-memorization gap = -0.01
+  Care/Harm             template-identity CONTROL (random split) = 0.93  ->  real signal above control = +0.04
+  Fairness   [ random] n=136  MLP=0.94 +/- 0.00   linear=0.92   MLP wins 80%
+  Fairness   [grouped] n=136  MLP=0.79 +/- 0.02   linear=0.47   MLP wins 100%
+  Fairness              template-memorization gap = +0.14
+  Fairness              template-identity CONTROL (random split) = 0.77  ->  real signal above control = +0.17
+--- layer 16 ---
+  Valence    [ random] n=176  MLP=0.94 +/- 0.01   linear=0.87   MLP wins 100%
+  Valence    [grouped] n=176  MLP=0.86 +/- 0.06   linear=0.55   MLP wins 100%
+  Valence               template-memorization gap = +0.08
+  Valence               template-identity CONTROL (random split) = 0.83  ->  real signal above control = +0.12
+  Arousal    [ random] n=136  MLP=0.95 +/- 0.01   linear=0.90   MLP wins 100%
+  Arousal    [grouped] n=136  MLP=0.85 +/- 0.07   linear=0.46   MLP wins 100%
+  Arousal               template-memorization gap = +0.10
+  Arousal               template-identity CONTROL (random split) = 0.77  ->  real signal above control = +0.17
+  Care/Harm  [ random] n=436  MLP=0.98 +/- 0.00   linear=0.98   MLP wins 30%
+  Care/Harm  [grouped] n=436  MLP=0.98 +/- 0.00   linear=0.66   MLP wins 100%
+  Care/Harm             template-memorization gap = -0.01
+  Care/Harm             template-identity CONTROL (random split) = 0.93  ->  real signal above control = +0.05
+  Fairness   [ random] n=136  MLP=0.94 +/- 0.01   linear=0.91   MLP wins 90%
+  Fairness   [grouped] n=136  MLP=0.79 +/- 0.02   linear=0.46   MLP wins 100%
+  Fairness              template-memorization gap = +0.15
+  Fairness              template-identity CONTROL (random split) = 0.77  ->  real signal above control = +0.17
+==============================================================================
+Read the GROUPED row as the honest accuracy, and the CONTROL row as the
+accuracy that pure template identity already buys under a random split.
+Defensible = GROUPED mean clearly above 0.50 with a small spread AND the
+random-split number clearly above its own template-identity control.

@@ -1,0 +1,212 @@
+
+===== step6 run 2026-09-28 11:49:22 quick=True =====
+[log] writing to results_step6.txt  |  QUICK=True (prompts=3, samples=2, scales=[0.0, 4.0], directions=['mean', 'random'])
+Full run: ~20-40 min on a T4. QUICK run: ~4-6 min. Keep the browser tab open.
+==============================================================================
+Steering toward POSITIVE on all 4 axes @ layer 14. directions = ['mean', 'random']
+tone in -1..1 (measured with the steer hook OFF); fluency = mean per-token logp.
+Measuring-probe gate: template-grouped held-out accuracy must be >= 0.6.
+==============================================================================
+
+### Valence: 176 sentences (88 pos / 88 neg), 32 groups
+    measuring probe held-out accuracy = 0.72   (gate 0.6)
+    cos(logreg, mean) = +1.000
+    cos(   lda, mean) = +0.731
+    cos(random, mean) = +0.009
+  [  mean] tone  0.0=+0.04  4.0=+0.16   slope=+0.12   fluency=-2.61
+  [random] tone  0.0=+0.02  4.0=+0.06   slope=+0.04   fluency=-2.60
+
+### Arousal: 136 sentences (68 pos / 68 neg), 28 groups
+    measuring probe held-out accuracy = 0.81   (gate 0.6)
+    cos(logreg, mean) = +1.000
+    cos(   lda, mean) = +0.704
+    cos(random, mean) = -0.076
+  [  mean] tone  0.0=-0.14  4.0=-0.14   slope=-0.00   fluency=-2.34
+  [random] tone  0.0=-0.17  4.0=-0.04   slope=+0.13   fluency=-2.25
+
+### Care/Harm: 436 sentences (218 pos / 218 neg), 58 groups
+    measuring probe held-out accuracy = 0.98   (gate 0.6)
+    cos(logreg, mean) = +1.000
+    cos(   lda, mean) = +0.429
+    cos(random, mean) = +0.016
+  [  mean] tone  0.0=-0.09  4.0=-0.04   slope=+0.04   fluency=-2.50
+  [random] tone  0.0=-0.05  4.0=-0.03   slope=+0.02   fluency=-2.50
+
+### Fairness: 136 sentences (68 pos / 68 neg), 28 groups
+    measuring probe held-out accuracy = 0.66   (gate 0.6)
+    cos(logreg, mean) = +1.000
+    cos(   lda, mean) = +0.493
+    cos(random, mean) = -0.063
+  [  mean] tone  0.0=+0.05  4.0=+0.15   slope=+0.10   fluency=-2.66
+  [random] tone  0.0=+0.01  4.0=+0.08   slope=+0.07   fluency=-2.90
+
+==============================================================================
+SUMMARY  (slope = tone at max scale - tone at 0; 'random' is the SHAM control)
+axis       n +/-     probe    direction   slope  fluency
+Valence    88/88      0.72         mean   +0.12    -2.61
+Valence    88/88      0.72       random   +0.04    -2.60
+Arousal    68/68      0.81         mean   -0.00    -2.34
+Arousal    68/68      0.81       random   +0.13    -2.25
+Care/Harm  218/218    0.98         mean   +0.04    -2.50
+Care/Harm  218/218    0.98       random   +0.02    -2.50
+Fairness   68/68      0.66         mean   +0.10    -2.66
+Fairness   68/68      0.66       random   +0.07    -2.90
+A real steer = slope clearly larger than the SHAM row with fluency near baseline.
+If the sham moves tone as much as the real directions, the probe is measuring
+noise, not tone -- and the honest conclusion is 'not measurable at this scale'.
+
+===== step6 run 2026-09-28 11:53:31 quick=False =====
+[log] writing to results_step6.txt  |  QUICK=False (prompts=5, samples=4, scales=[0.0, 1.5, 4.0], directions=['mean', 'logreg', 'lda', 'random'])
+Full run: ~20-40 min on a T4. QUICK run: ~4-6 min. Keep the browser tab open.
+==============================================================================
+Steering toward POSITIVE on all 4 axes @ layer 14. directions = ['mean', 'logreg', 'lda', 'random']
+tone in -1..1 (measured with the steer hook OFF); fluency = mean per-token logp.
+Measuring-probe gate: template-grouped held-out accuracy must be >= 0.6.
+==============================================================================
+
+### Valence: 176 sentences (88 pos / 88 neg), 32 groups
+    measuring probe held-out accuracy = 0.72   (gate 0.6)
+    cos(logreg, mean) = +1.000
+    cos(   lda, mean) = +0.731
+    cos(random, mean) = +0.009
+  [  mean] tone  0.0=+0.00  1.5=+0.04  4.0=+0.05   slope=+0.05   fluency=-2.58
+  [logreg] tone  0.0=+0.03  1.5=+0.08  4.0=+0.11   slope=+0.08   fluency=-2.55
+  [   lda] tone  0.0=+0.03  1.5=-0.00  4.0=+0.03   slope=+0.00   fluency=-2.54
+  [random] tone  0.0=+0.03  1.5=-0.05  4.0=+0.03   slope=-0.01   fluency=-2.55
+
+### Arousal: 136 sentences (68 pos / 68 neg), 28 groups
+    measuring probe held-out accuracy = 0.81   (gate 0.6)
+    cos(logreg, mean) = +1.000
+    cos(   lda, mean) = +0.704
+    cos(random, mean) = -0.016
+  [  mean] tone  0.0=-0.10  1.5=-0.07  4.0=-0.12   slope=-0.02   fluency=-2.52
+  [logreg] tone  0.0=-0.04  1.5=-0.12  4.0=-0.07   slope=-0.03   fluency=-2.46
+  [   lda] tone  0.0=-0.12  1.5=-0.04  4.0=-0.11   slope=+0.01   fluency=-2.60
+  [random] tone  0.0=-0.04  1.5=-0.14  4.0=-0.12   slope=-0.09   fluency=-2.49
+
+### Care/Harm: 436 sentences (218 pos / 218 neg), 58 groups
+    measuring probe held-out accuracy = 0.98   (gate 0.6)
+    cos(logreg, mean) = +1.000
+    cos(   lda, mean) = +0.429
+    cos(random, mean) = -0.018
+  [  mean] tone  0.0=-0.09  1.5=-0.06  4.0=-0.10   slope=-0.01   fluency=-2.57
+  [logreg] tone  0.0=-0.15  1.5=-0.08  4.0=-0.08   slope=+0.07   fluency=-2.53
+  [   lda] tone  0.0=-0.06  1.5=-0.06  4.0=-0.08   slope=-0.03   fluency=-2.52
+  [random] tone  0.0=-0.09  1.5=-0.06  4.0=-0.07   slope=+0.02   fluency=-2.51
+
+### Fairness: 136 sentences (68 pos / 68 neg), 28 groups
+    measuring probe held-out accuracy = 0.66   (gate 0.6)
+    cos(logreg, mean) = +1.000
+    cos(   lda, mean) = +0.493
+    cos(random, mean) = +0.014
+  [  mean] tone  0.0=+0.08  1.5=+0.12  4.0=+0.06   slope=-0.02   fluency=-2.52
+  [logreg] tone  0.0=+0.03  1.5=+0.09  4.0=+0.07   slope=+0.05   fluency=-2.54
+  [   lda] tone  0.0=+0.06  1.5=+0.06  4.0=+0.00   slope=-0.05   fluency=-2.51
+  [random] tone  0.0=+0.06  1.5=+0.14  4.0=+0.10   slope=+0.04   fluency=-2.49
+
+==============================================================================
+SUMMARY  (slope = tone at max scale - tone at 0; 'random' is the SHAM control)
+axis       n +/-     probe    direction   slope  fluency
+Valence    88/88      0.72         mean   +0.05    -2.58
+Valence    88/88      0.72       logreg   +0.08    -2.55
+Valence    88/88      0.72          lda   +0.00    -2.54
+Valence    88/88      0.72       random   -0.01    -2.55
+Arousal    68/68      0.81         mean   -0.02    -2.52
+Arousal    68/68      0.81       logreg   -0.03    -2.46
+Arousal    68/68      0.81          lda   +0.01    -2.60
+Arousal    68/68      0.81       random   -0.09    -2.49
+Care/Harm  218/218    0.98         mean   -0.01    -2.57
+Care/Harm  218/218    0.98       logreg   +0.07    -2.53
+Care/Harm  218/218    0.98          lda   -0.03    -2.52
+Care/Harm  218/218    0.98       random   +0.02    -2.51
+Fairness   68/68      0.66         mean   -0.02    -2.52
+Fairness   68/68      0.66       logreg   +0.05    -2.54
+Fairness   68/68      0.66          lda   -0.05    -2.51
+Fairness   68/68      0.66       random   +0.04    -2.49
+A real steer = slope clearly larger than the SHAM row with fluency near baseline.
+If the sham moves tone as much as the real directions, the probe is measuring
+noise, not tone -- and the honest conclusion is 'not measurable at this scale'.
+
+===== step6 run 2026-09-28 14:18:00 quick=False =====
+[log] writing to results_step6.txt  |  QUICK=False (prompts=5, samples=4, scales=[0.0, 1.5, 4.0], directions=['mean', 'logreg', 'lda', 'probe-grad', 'random'])
+Full run: ~20-40 min on a T4. QUICK run: ~4-6 min. Keep the browser tab open.
+==============================================================================
+Steering toward POSITIVE on all 4 axes @ layer 14. directions = ['mean', 'logreg', 'lda', 'probe-grad', 'random']
+tone in -1..1 (measured with the steer hook OFF); fluency = mean per-token logp.
+Measuring-probe gate: template-grouped held-out accuracy must be >= 0.6.
+==============================================================================
+
+### Valence: 176 sentences (88 pos / 88 neg), 32 groups
+    measuring probe held-out accuracy = 0.72   (gate 0.6)
+    cos(logreg, mean) = +1.000
+    cos(   lda, mean) = +0.731
+    cos(probe-grad, mean) = +0.982
+    cos(random, mean) = +0.009
+  [  mean] tone  0.0=+0.00  1.5=+0.04  4.0=+0.05   slope=+0.05   fluency=-2.58
+  [logreg] tone  0.0=+0.03  1.5=+0.08  4.0=+0.11   slope=+0.08   fluency=-2.55
+  [   lda] tone  0.0=+0.03  1.5=-0.00  4.0=+0.03   slope=+0.00   fluency=-2.54
+  [probe-grad] tone  0.0=+0.03  1.5=-0.05  4.0=+0.05   slope=+0.02   fluency=-2.55
+  [random] tone  0.0=+0.02  1.5=+0.02  4.0=+0.06   slope=+0.05   fluency=-2.64
+
+### Arousal: 136 sentences (68 pos / 68 neg), 28 groups
+    measuring probe held-out accuracy = 0.81   (gate 0.6)
+    cos(logreg, mean) = +1.000
+    cos(   lda, mean) = +0.704
+    cos(probe-grad, mean) = +0.964
+    cos(random, mean) = +0.041
+  [  mean] tone  0.0=-0.04  1.5=-0.12  4.0=-0.07   slope=-0.04   fluency=-2.45
+  [logreg] tone  0.0=-0.12  1.5=-0.04  4.0=-0.12   slope=+0.01   fluency=-2.60
+  [   lda] tone  0.0=-0.04  1.5=-0.15  4.0=-0.13   slope=-0.09   fluency=-2.48
+  [probe-grad] tone  0.0=-0.08  1.5=-0.10  4.0=-0.07   slope=+0.00   fluency=-2.49
+  [random] tone  0.0=-0.12  1.5=-0.05  4.0=-0.07   slope=+0.05   fluency=-2.46
+
+### Care/Harm: 436 sentences (218 pos / 218 neg), 58 groups
+    measuring probe held-out accuracy = 0.98   (gate 0.6)
+    cos(logreg, mean) = +1.000
+    cos(   lda, mean) = +0.429
+    cos(probe-grad, mean) = +0.960
+    cos(random, mean) = -0.055
+  [  mean] tone  0.0=-0.06  1.5=-0.06  4.0=-0.07   slope=-0.02   fluency=-2.54
+  [logreg] tone  0.0=-0.09  1.5=-0.06  4.0=-0.07   slope=+0.02   fluency=-2.52
+  [   lda] tone  0.0=-0.13  1.5=-0.12  4.0=-0.04   slope=+0.10   fluency=-2.56
+  [probe-grad] tone  0.0=-0.04  1.5=-0.11  4.0=-0.10   slope=-0.06   fluency=-2.53
+  [random] tone  0.0=-0.10  1.5=-0.09  4.0=-0.06   slope=+0.04   fluency=-2.63
+
+### Fairness: 136 sentences (68 pos / 68 neg), 28 groups
+    measuring probe held-out accuracy = 0.66   (gate 0.6)
+    cos(logreg, mean) = +1.000
+    cos(   lda, mean) = +0.493
+    cos(probe-grad, mean) = +0.845
+    cos(random, mean) = -0.030
+  [  mean] tone  0.0=+0.06  1.5=+0.14  4.0=+0.09   slope=+0.03   fluency=-2.48
+  [logreg] tone  0.0=+0.08  1.5=+0.13  4.0=+0.07   slope=-0.01   fluency=-2.59
+  [   lda] tone  0.0=+0.10  1.5=+0.04  4.0=+0.09   slope=-0.01   fluency=-2.53
+  [probe-grad] tone  0.0=+0.09  1.5=+0.10  4.0=+0.07   slope=-0.02   fluency=-2.63
+  [random] tone  0.0=+0.03  1.5=+0.06  4.0=+0.09   slope=+0.06   fluency=-2.42
+
+==============================================================================
+SUMMARY  (slope = tone at max scale - tone at 0; 'random' is the SHAM control)
+axis       n +/-     probe    direction   slope  fluency
+Valence    88/88      0.72         mean   +0.05    -2.58
+Valence    88/88      0.72       logreg   +0.08    -2.55
+Valence    88/88      0.72          lda   +0.00    -2.54
+Valence    88/88      0.72   probe-grad   +0.02    -2.55
+Valence    88/88      0.72       random   +0.05    -2.64
+Arousal    68/68      0.81         mean   -0.04    -2.45
+Arousal    68/68      0.81       logreg   +0.01    -2.60
+Arousal    68/68      0.81          lda   -0.09    -2.48
+Arousal    68/68      0.81   probe-grad   +0.00    -2.49
+Arousal    68/68      0.81       random   +0.05    -2.46
+Care/Harm  218/218    0.98         mean   -0.02    -2.54
+Care/Harm  218/218    0.98       logreg   +0.02    -2.52
+Care/Harm  218/218    0.98          lda   +0.10    -2.56
+Care/Harm  218/218    0.98   probe-grad   -0.06    -2.53
+Care/Harm  218/218    0.98       random   +0.04    -2.63
+Fairness   68/68      0.66         mean   +0.03    -2.48
+Fairness   68/68      0.66       logreg   -0.01    -2.59
+Fairness   68/68      0.66          lda   -0.01    -2.53
+Fairness   68/68      0.66   probe-grad   -0.02    -2.63
+Fairness   68/68      0.66       random   +0.06    -2.42
+A real steer = slope clearly larger than the SHAM row with fluency near baseline.
+If the sham moves tone as much as the real directions, the probe is measuring
+noise, not tone -- and the honest conclusion is 'not measurable at this scale'.

@@ -1,0 +1,18 @@
+# MESE-CR dependencies
+#
+# Only two packages are actually imported by the project:
+#   torch          -- probes, CV, hooks, steering
+#   transformers   -- AutoTokenizer / AutoModelForCausalLM (Qwen2.5-1.5B-Instruct)
+# Everything else in the codebase is Python stdlib (csv, re, os, statistics, dataclasses).
+# numpy is NOT imported directly; it arrives as a torch dependency.
+#
+# On Google Colab: do NOT reinstall torch -- the preinstalled build is the CUDA one.
+#   !pip install -q transformers accelerate
+
+torch>=2.0
+transformers>=4.40
+
+# Optional, GPU generation only (colab convenience pass-through). Not needed for any of the
+# CPU-only checks: test_grouped_cv.py, test_probe_calibration.py, test_reading_controls.py,
+# check_length_control.py (tokenizer download only), and MESE_DRY=1 python step5_robust.py.
+accelerate>=0.30

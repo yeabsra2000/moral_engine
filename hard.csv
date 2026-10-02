@@ -1,0 +1,145 @@
+sentence,V,A,C,F,kind,group
+The landlord called back to say the eviction notice had been withdrawn and the lease renewed for three more years.,1,0,0,0,hard,valence|landlord
+The landlord called back to say the flat was needed for family and the keys had to be returned by the end of the month.,-1,0,0,0,hard,valence|landlord
+The scan came back with the mass gone and no further appointments on the calendar.,1,0,0,0,hard,valence|scan
+The scan came back with the mass grown and a second round of appointments on the calendar.,-1,0,0,0,hard,valence|scan
+The last payment cleared and the bank marked the loan closed.,1,0,0,0,hard,valence|loan
+The last payment bounced and the bank added the missed amount back onto the balance.,-1,0,0,0,hard,valence|loan
+Her application was approved and the visa arrived two weeks before the flight.,1,0,0,0,hard,valence|visa
+Her application was returned unopened and the flight left without her.,-1,0,0,0,hard,valence|visa
+The bus stopped at the corner where she was waiting and the doors opened.,1,0,0,0,hard,valence|busstop
+The bus went past the corner where she was waiting and the doors stayed shut.,-1,0,0,0,hard,valence|busstop
+Rain fell on the fields for six days and the wells filled again.,1,0,0,0,hard,valence|wells
+No rain fell on the fields for six days and the wells went dry.,-1,0,0,0,hard,valence|wells
+The doctor lowered the dosage and said the treatment could stop in spring.,1,0,0,0,hard,valence|dosage
+The doctor raised the dosage and said the treatment would go on through the winter.,-1,0,0,0,hard,valence|dosage
+The offer letter arrived with the salary figure written on the second line.,1,0,0,0,hard,valence|offer
+The withdrawal letter arrived before the salary figure had ever been discussed.,-1,0,0,0,hard,valence|offer
+The missing child was found asleep in the neighbour's garage twenty minutes later.,1,0,0,0,hard,valence|missingchild
+The missing child was found in the canal three days later.,-1,0,0,0,hard,valence|missingchild
+The team's grant was renewed and the whole equipment list was ordered that week.,1,0,0,0,hard,valence|grant
+The team's grant was not renewed and the equipment list was put aside.,-1,0,0,0,hard,valence|grant
+The last exam was marked and every answer on the sheet was correct.,1,0,0,0,hard,valence|exam
+The last exam was marked and none of the answers on the sheet were correct.,-1,0,0,0,hard,valence|exam
+The house passed inspection and the keys changed hands that afternoon.,1,0,0,0,hard,valence|sale
+The house failed inspection and the sale was called off that afternoon.,-1,0,0,0,hard,valence|sale
+The bridge reopened two weeks after the flood and traffic crossed it again.,1,0,0,0,hard,valence|bridge
+The bridge stayed shut two weeks after the flood and the detour added an hour each way.,-1,0,0,0,hard,valence|bridge
+Her manuscript was accepted by the journal on the first submission.,1,0,0,0,hard,valence|manuscript
+Her manuscript was returned by the journal on the first submission.,-1,0,0,0,hard,valence|manuscript
+The company reported a profit and the staff bonuses were paid in December.,1,0,0,0,hard,valence|bonus
+The company reported a loss and the staff bonuses were cancelled in December.,-1,0,0,0,hard,valence|bonus
+The plane landed on time and every bag came out on the belt.,1,0,0,0,hard,valence|flight
+The plane landed four hours late and every bag was left behind.,-1,0,0,0,hard,valence|flight
+The wall was rebuilt by volunteers and the family moved back into the ground floor.,1,0,0,0,hard,valence|wall
+The wall stayed as rubble and the family lived in the shelter through the winter.,-1,0,0,0,hard,valence|wall
+The vote went through and the playground was scheduled for construction in April.,1,0,0,0,hard,valence|vote
+The vote failed and the playground was struck from the budget entirely.,-1,0,0,0,hard,valence|vote
+The bell rang through the hall and fourteen people were on their feet before it stopped.,0,1,0,0,hard,arousal|bell
+The hall clock moved past three while nobody in the room shifted position.,0,-1,0,0,hard,arousal|bell
+The starter's whistle blew and the four runners left the blocks in one second.,0,1,0,0,hard,arousal|whistle
+The starter's whistle was never blown and the four runners stood at the blocks talking.,0,-1,0,0,hard,arousal|whistle
+The phone rang at three in the morning and she was dressed and out of the flat in ninety seconds.,0,1,0,0,hard,arousal|nightcall
+The afternoon ran from one o'clock to five with nothing on the desk changing.,0,-1,0,0,hard,arousal|nightcall
+The gate dropped and the whole stand was up and shouting in one movement.,0,1,0,0,hard,arousal|gate
+The gate stayed open and the few people inside drifted between the tables.,0,-1,0,0,hard,arousal|gate
+Water came over the edge of the sink in sheets and both of them worked the mop without stopping.,0,1,0,0,hard,arousal|water
+Water dripped into the sink at the rate of the tap and neither of them moved from the chair.,0,-1,0,0,hard,arousal|water
+The lights went out across the whole block and every torch came on in one second.,0,1,0,0,hard,arousal|blackout
+The lights stayed on across the whole block and the torches lay untouched in the drawer.,0,-1,0,0,hard,arousal|blackout
+The sprinter left the line first and held the lead around the bend.,0,1,0,0,hard,arousal|sprint
+The sprinter waited at the line while the others walked a lap of the far side.,0,-1,0,0,hard,arousal|sprint
+The fire door flew open and the corridor filled with people moving one direction.,0,1,0,0,hard,arousal|firedoor
+The fire door stayed shut and the corridor had nobody in it all morning.,0,-1,0,0,hard,arousal|firedoor
+"He read the message, took the keys, and was on the road within two minutes.",0,1,0,0,hard,arousal|message
+"He read the message, put the phone face down and went back to the sofa.",0,-1,0,0,hard,arousal|message
+The referee's final gesture sent both benches onto the field.,0,1,0,0,hard,arousal|referee
+The referee walked to the centre circle while both benches sat in their places.,0,-1,0,0,hard,arousal|referee
+The needle on the dial swung to the red end within seconds of the switch.,0,1,0,0,hard,arousal|dial
+The needle on the dial held near zero for the whole hour.,0,-1,0,0,hard,arousal|dial
+Her hands took the ropes in pairs and the sail came down before the squall reached the harbour.,0,1,0,0,hard,arousal|sail
+Her hands rested on the ropes while the sail hung slack in the evening air.,0,-1,0,0,hard,arousal|sail
+The last problem was finished and half the room was already standing with bags on shoulders.,0,1,0,0,hard,arousal|classroom
+The last problem was finished and nobody in the room reached for a bag.,0,-1,0,0,hard,arousal|classroom
+The dog's ears went up and it was through the gate before the lead was clipped on.,0,1,0,0,hard,arousal|doglead
+The dog lay across the doorway and did not lift its head when the lead was clipped on.,0,-1,0,0,hard,arousal|doglead
+The scoreboard changed and the whole stand came to its feet in one movement.,0,1,0,0,hard,arousal|scoreboard
+The scoreboard held level and the whole stand sat in its places until the second half ended.,0,-1,0,0,hard,arousal|scoreboard
+Orders came down the radio in short bursts and the crew moved at a run.,0,1,0,0,hard,arousal|radio
+The radio was off and the crew sat on the tailgate through the afternoon.,0,-1,0,0,hard,arousal|radio
+"The kettle went off, the toast popped, and both of them talked over each other.",0,1,0,0,hard,arousal|kettle
+The kettle went off and neither of them got up to pour it.,0,-1,0,0,hard,arousal|kettle
+Three separate phones went off in one minute and the meeting broke into motion.,0,1,0,0,hard,arousal|phones
+Three separate phones lay face down and the meeting worked through its agenda to the end.,0,-1,0,0,hard,arousal|phones
+Ravi carried the stranger's groceries up four flights and set them by her door.,0,0,1,0,hard,careharm|groceries
+Ravi watched the stranger's groceries split on the stairs and stepped around them.,0,0,-1,0,hard,careharm|groceries
+"When the child's bus never came, Leyla walked her the whole way home.",0,0,1,0,hard,careharm|childbus
+"When the child's bus never came, the driver shut the door and left her at the stop.",0,0,-1,0,hard,careharm|childbus
+Two neighbours dug the old man's path clear before he woke.,0,0,1,0,hard,careharm|path
+Two neighbours left the old man's path under ice and used the other gate.,0,0,-1,0,hard,careharm|path
+The nurse came back on her night off to sit with the patient.,0,0,1,0,hard,careharm|nightshift
+The nurse did not come back on her night off and the patient went through it with nobody in the ward.,0,0,-1,0,hard,careharm|nightshift
+She gave up her seat on the last bus and stood the whole way home.,0,0,1,0,hard,careharm|seat
+She took the last seat on the bus while the man on crutches held the rail.,0,0,-1,0,hard,careharm|seat
+He lifted the fallen cyclist's bike off the road and waited with her until her sister came.,0,0,1,0,hard,careharm|cyclist
+He stepped over the fallen cyclist's bike and drove on.,0,0,-1,0,hard,careharm|cyclist
+The class put their lunch money together for the boy whose parents had not paid the trip fee.,0,0,1,0,hard,careharm|lunchmoney
+The class counted their lunch money and left the boy at the school gates.,0,0,-1,0,hard,careharm|lunchmoney
+The vet stayed past closing to set the dog's leg.,0,0,1,0,hard,careharm|vet
+The vet closed on the hour and the dog's leg went unset overnight.,0,0,-1,0,hard,careharm|vet
+Grandmother was given the room by the window where the family could sit with her daily.,0,0,1,0,hard,careharm|windowroom
+Grandmother was given the room at the end of the corridor where visits were cut to one a week.,0,0,-1,0,hard,careharm|windowroom
+He put his coat over the sleeping man on the platform.,0,0,1,0,hard,careharm|coat
+He walked past the sleeping man on the platform where the wind came through.,0,0,-1,0,hard,careharm|coat
+She sat with the new student at lunch and showed her where the lockers were.,0,0,1,0,hard,careharm|newcomer
+She moved to a table across the room and left the new student at the window.,0,0,-1,0,hard,careharm|newcomer
+"When the roof leaked, the family took the neighbour's children in for the week.",0,0,1,0,hard,careharm|roof
+"When the roof leaked, the family sent the neighbour's children back out to the yard.",0,0,-1,0,hard,careharm|roof
+The crew went back into the smoke for the second person.,0,0,1,0,hard,careharm|smoke
+The crew reached the doorway and turned back the way they came.,0,0,-1,0,hard,careharm|smoke
+He read his aunt's letter to her twice over that evening.,0,0,1,0,hard,careharm|aloud
+He put his aunt's letter on the table unread and went out.,0,0,-1,0,hard,careharm|aloud
+"The riders stopped, blocked the lane and stood over the fallen rider until the ambulance came.",0,0,1,0,hard,careharm|riders
+The riders went around the fallen rider and the lane was clear by the next bend.,0,0,-1,0,hard,careharm|riders
+The teacher stayed an hour to walk the youngest pupil to the bus stop.,0,0,1,0,hard,careharm|teacher
+The teacher locked the classroom with the youngest pupil sitting inside at his desk.,0,0,-1,0,hard,careharm|teacher
+She set a bowl of water on the step each evening for the stray cat.,0,0,1,0,hard,careharm|straycat
+She chased the stray cat off the step each evening before the guests came.,0,0,-1,0,hard,careharm|straycat
+The pair carried the piano up three flights so the widow could play it again.,0,0,1,0,hard,careharm|piano
+The pair left the piano on the pavement outside and told the widow it would not fit.,0,0,-1,0,hard,careharm|piano
+The four workers logged eight hours each and each of them was handed eighty birr at six.,0,0,0,1,hard,fairness|wages
+"The four workers logged eight hours each and the envelopes at six held eighty, eighty, eighty and three hundred birr.",0,0,0,-1,hard,fairness|wages
+"Aisha brought in forty crates and Sam brought in forty, and each of them was handed four hundred birr.",0,0,0,1,hard,fairness|crates
+"Aisha brought in forty crates and Sam brought in four, and Sam was handed four hundred birr and Aisha one hundred.",0,0,0,-1,hard,fairness|crates
+The last slice of cake was cut down the middle and both children were given a plate.,0,0,0,1,hard,fairness|cake
+The last slice of cake was cut in two and both pieces went on the elder child's plate.,0,0,0,-1,hard,fairness|cake
+The raffle tickets went into one drum and the winner was drawn with the room watching.,0,0,0,1,hard,fairness|raffle
+The raffle tickets went into one drum and the winner's name was written on a slip in the organiser's pocket.,0,0,0,-1,hard,fairness|raffle
+The two contractors billed fourteen days each and both invoices cleared at the posted rate.,0,0,0,1,hard,fairness|contractors
+The two contractors billed fourteen days each and one invoice cleared at the posted rate while the other was cut in half.,0,0,0,-1,hard,fairness|contractors
+The well fee was set at one hundred birr per household and one hundred birr was collected at every door on the street.,0,0,0,1,hard,fairness|wellfee
+The well fee was set at one hundred birr per household and fifty was collected at the near end and two hundred at the far end.,0,0,0,-1,hard,fairness|wellfee
+Both drivers had their licences checked at the checkpoint and both cars were waved on.,0,0,0,1,hard,fairness|checkpoint
+"Both drivers had their licences checked at the checkpoint, one car was waved on and the other's boot was opened for an hour.",0,0,0,-1,hard,fairness|checkpoint
+The exam papers were marked with the names covered and the scores went up the next day.,0,0,0,1,hard,fairness|marking
+The exam papers were marked with the names showing and the professor's own students came out at the top.,0,0,0,-1,hard,fairness|marking
+The landlord charged every flat on the second floor the rent printed in the contract.,0,0,0,1,hard,fairness|rent
+The landlord charged the second floor the printed rent and raised the two flats beside his door by a third.,0,0,0,-1,hard,fairness|rent
+The queue at the gate was served in the order it formed until the last person passed.,0,0,0,1,hard,fairness|queue
+The queue at the gate was served until a car with embassy plates pulled to the front and cut the line.,0,0,0,-1,hard,fairness|queue
+The company published the wage table and paid every grade the figure printed on it.,0,0,0,1,hard,fairness|wagetable
+The company published the wage table and paid the manager's friends one grade above the figure printed on it.,0,0,0,-1,hard,fairness|wagetable
+Two hundred seats went to each region by the committee's own rules.,0,0,0,1,hard,fairness|seats
+Two hundred seats went to each region on paper and four hundred went to the region holding the chairman's constituency.,0,0,0,-1,hard,fairness|seats
+The draw put the top eight seeds into separate halves by rotation.,0,0,0,1,hard,fairness|draw
+The draw put six of the top seeds into one half and left the host club by itself in the other.,0,0,0,-1,hard,fairness|draw
+The audit checked the receipts of every branch for the full year.,0,0,0,1,hard,fairness|audit
+The audit checked the receipts of one branch for the full year and the other eleven files were closed unopened.,0,0,0,-1,hard,fairness|audit
+"When the well ran short, the water was measured out by household size for all nine families.",0,0,0,1,hard,fairness|ration
+"When the well ran short, the water was measured out for six families while the three houses by the pump drew what they wanted.",0,0,0,-1,hard,fairness|ration
+The scholarship committee scored all twenty applications on the published criteria before the interviews.,0,0,0,1,hard,fairness|scholarship
+The scholarship committee interviewed the director's niece first and the other nineteen folders were put away unopened.,0,0,0,-1,hard,fairness|scholarship
+The eight members took one turn each carrying the equipment on the trek.,0,0,0,1,hard,fairness|trek
+Two of the eight members carried the equipment on every day of the trek.,0,0,0,-1,hard,fairness|trek
+The fine for late returns was charged to every borrower who brought a book back late.,0,0,0,1,hard,fairness|fine
+The fine for late returns was charged to borrowers from the village and dropped for the staff's own children.,0,0,0,-1,hard,fairness|fine
