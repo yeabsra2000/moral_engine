@@ -26,3 +26,11 @@ results_step*_dry.txt
 
 # Colab scratch
 sample_data/
+
+# ---- scratch files ----
+# Leading-underscore files are throwaway (smoke tests, temp logs, commit messages).
+# Real tooling is NEVER underscore-prefixed; the four CPU self-tests and
+# check_length_control.py are named as such deliberately.
+_*.py
+_*.txt
+_*.csv
