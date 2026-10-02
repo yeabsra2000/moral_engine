@@ -76,17 +76,21 @@ The key-position cosine table is produced by `steering_keys.py` and needs no GPU
   - RQ1: Can a small probe read the four moral/emotional axes from hidden states,
     generalizing to held-out text?
   - RQ2: Does a nonlinear ("bending fabric") probe beat a linear ("rigid hyperplane")
-    probe? (Tests the central hypothesis of this work.)
+    probe? (Answers the readout side of the central hypothesis.)
   - RQ3: Can activation steering predictably shift output tone (dose-response)?
   - RQ4 (the question this paper turns on): **where do the steering keys point?**
-    If every probe-derived key lies in span(μ⁺ − μ⁻), then the RQ3 null is a property
-    of the method rather than an empirical accident — and only then can we state a
-    boundary claim instead of an unexplained failure.
-- Contributions: (1) the probe-gradient `rowspace(W₁)` identity (§4) and its measured
+    §4.0 answers it in two steps, and the distinction matters. *By construction*, every
+    probe-derived key lies in `rowspace(W₁)` — a subspace fixed by the readout, not by
+    the data. *Empirically*, on these activations the probe gradient additionally
+    collapses onto the mean-difference direction (cos 0.845–0.982). Only with both does
+    the RQ3 null become an explained property of the method rather than an unexplained
+    failure — and only then can we state a boundary claim.
+- Contributions: (1) the probe-gradient `rowspace(W₁)` identity (§4.0) and its measured
   consequence on real activations; (2) evidence that the two obvious "nonlinear key"
-  repairs do not escape it; (3) a scale-bound, control-heavy negative result with a
-  documented mechanism, plus an offline test (`test_steering_collapse.py`) that
-  reproduces the mechanism with no model at all.
+  repairs do not escape it; (3) the deliberate separation of the *structural* claim from
+  the *contingent* one, which is what keeps the finding from being a tautology;
+  (4) a scale-bound, control-heavy negative result, plus an offline test
+  (`test_steering_collapse.py`) that reproduces the mechanism with no model at all.
 
 ## 2. Related Work (cite correctly — do NOT claim these are new)
 - Probing / concept bottleneck models: Alain & Bengio (2018, linear probes); Belinkov
