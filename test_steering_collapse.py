@@ -59,7 +59,8 @@ if not any(os.path.exists(os.path.join(_p, "steering_keys.py"))
         "  Check with:  !ls -la *.py\n" % (_HERE, os.getcwd()))
 
 from steering_keys import (DEFAULT_SHAM_SEED, SteerController, all_keys, cos, dir_mean,
-                           dir_probe_grad, dir_probe_grad_class, dir_probe_grad_path)
+                           dir_probe_grad, dir_probe_grad_class, dir_probe_grad_path,
+                           sham_vector)
 
 fails = []
 
@@ -251,6 +252,65 @@ try:
 except AssertionError as exc:
     check("SteerController.check() raises on under-application", 1.0, 1.0, 2.0)
     print(f"       (message: {str(exc).splitlines()[0][:76]}...)")
+
+# ---- scenario E: the CPU-generator/CUDA-draw trap ---------------------------
+# Found on the FIRST real CUDA run: `torch.randn(shape, device='cuda',
+# generator=torch.Generator())` raises "Expected a 'cuda' device type for generator
+# but found 'cpu'". This cannot be reproduced on a CPU-only machine at runtime, so
+# the guard here has two parts: a runtime check of sham_vector's contract, and a
+# static scan for the anti-pattern in the GPU-reachable source.
+print("--- E. CPU-generator / CUDA-draw trap (device hygiene) ---")
+
+# (1) runtime: sham_vector must be deterministic, match a plain CPU draw exactly,
+#     and land on whatever device was asked for.
+ref = torch.randn(d, generator=torch.Generator().manual_seed(DEFAULT_SHAM_SEED))
+check("sham_vector matches the reference CPU draw exactly",
+      float((sham_vector(d, DEFAULT_SHAM_SEED, torch.device('cpu')) - ref).abs().max()),
+      -1e-9, 1e-6)
+check("sham_vector is repeatable (same seed -> same vector)",
+      float((sham_vector(d, DEFAULT_SHAM_SEED, 'cpu') - sham_vector(d, DEFAULT_SHAM_SEED, 'cpu')).abs().max()),
+      -1e-9, 1e-6)
+check("sham_vector honours the requested device",
+      float(sham_vector(d, DEFAULT_SHAM_SEED, 'cpu').device == torch.device('cpu')), 1.0, 1.001)
+check("sham_vector result is finite", float(torch.isfinite(ref).all()), 1.0, 1.001)
+
+# (2) static: no real `torch.randn(...)` call may combine `device=` with a
+#     DEFAULT (CPU) generator. Pairing them is exactly the RuntimeError that stopped
+#     the first GPU run, and no CPU-only runtime test can ever reach it.
+#     AST-based deliberately: a regex over source text flags the very COMMENTS that
+#     document the bug (it did, on the first attempt), so walk the parsed tree
+#     instead -- comments and docstrings are not calls.
+import ast
+import pathlib
+
+def _offending_randn(path):
+    src = pathlib.Path(path).read_text(encoding="utf-8")
+    tree = ast.parse(src)
+    hits = []
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call) or not getattr(node.func, "attr", None) == "randn":
+            continue
+        if not (isinstance(node.func.value, ast.Name) and node.func.value.id == "torch"):
+            continue
+        kws = {k.arg: k for k in node.keywords}
+        if "device" not in kws or "generator" not in kws:
+            continue                            # only device+generator is unsafe
+        seg = ast.get_source_segment(src, node) or node.func.attr
+        gens = [n for n in ast.walk(kws["generator"].value)
+                if isinstance(n, ast.Call) and getattr(n.func, "attr", None) == "Generator"]
+        safe = any(any(kw.arg == "device" for kw in g.keywords) for g in gens)
+        if not safe:
+            hits.append(f"{path}: {' '.join(seg.split())[:70]}")
+    return hits
+
+SCAN = ["steering_keys.py", "step5_robust.py", "step6_steer_all.py", "step7_sweep.py",
+        "probe_cv.py", "dry_model.py"]
+bad = [h for name in SCAN if pathlib.Path(name).exists() for h in _offending_randn(name)]
+check("no randn() mixes device= with a CPU generator", float(len(bad)), 0.0, 0.0)
+for b in bad:
+    print(f"       OFFENDER: {b}")
+print(f"       scanned {len(SCAN)} GPU-reachable source files (AST, not regex) "
+      f"for the anti-pattern.")
 
 print("RESULT:", "ALL PASS" if not fails else f"FAILED: {fails}")
 raise SystemExit(1 if fails else 0)

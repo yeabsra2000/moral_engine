@@ -228,9 +228,13 @@ if DRY:
     # would test nothing that matters. Inject a synthetic label-correlated
     # component ONLY so the gates open. Still meaningless.
     _gs = torch.Generator().manual_seed(7)
-    _dirs = torch.randn(4, next(iter(XMAT.values())).size(1), generator=_gs)
+    # drawn on CPU (the generator is CPU), then moved: a CPU `_sig` added to a CUDA
+    # XMAT row raises a device mismatch, and MESE_DRY=1 is encouraged on Colab.
+    _dev = next(iter(XMAT.values())).device
+    _dirs = torch.randn(4, next(iter(XMAT.values())).size(1),
+                        generator=_gs).to(_dev)
     _dirs = _dirs / _dirs.norm(dim=1, keepdim=True)
-    _sig = sum(LAB[:, a].unsqueeze(1) * _dirs[a].unsqueeze(0) for a in range(4))
+    _sig = sum(LAB[:, a].to(_dev).unsqueeze(1) * _dirs[a].unsqueeze(0) for a in range(4))
     for key in XMAT:
         M = XMAT[key] + 1.5 * _sig
         XMAT[key] = M / (M.norm(dim=1, keepdim=True) + 1e-8)

@@ -150,6 +150,25 @@ def dir_probe_grad_class(net, Xa, y):
 
 
 # ---- the whole key set for one (axis, layer, pooling) cell ------------------
+def sham_vector(shape, seed, device):
+    """A deterministic SHAM direction for `shape`, allocated on `device`.
+
+    Drawn on CPU and then moved, for two reasons:
+
+    1. BUG FIX (2026-10-03, caught only on the first CUDA run). The natural form is
+           torch.randn(shape, device=device, generator=torch.Generator().manual_seed(s))
+       which raises "RuntimeError: Expected a 'cuda' device type for generator but
+       found 'cpu'" -- `torch.Generator()` defaults to CPU and cannot feed a CUDA
+       draw. No CPU-only test can reach that path, which is why it survived until the
+       GPU run. Keeping the draw on CPU and moving it sidesteps the whole issue.
+    2. A control should be reproducible across devices: this way the same seed gives
+       the *identical* sham vector whether the script runs on CPU or CUDA, so a
+       result can be reproduced exactly rather than approximately.
+    """
+    v = torch.randn(shape, generator=torch.Generator().manual_seed(int(seed)))
+    return v.to(device)      # `.to` is a no-op when the device already matches
+
+
 def all_keys(Xa, y, net, sham_seed=DEFAULT_SHAM_SEED):
     """Every steering key for one cell, unit-norm, `mean` first.
 
@@ -172,8 +191,9 @@ def all_keys(Xa, y, net, sham_seed=DEFAULT_SHAM_SEED):
         "probe-grad":       dir_probe_grad(net, Xa, y),
         "probe-grad-path":  dir_probe_grad_path(net, Xa, y),
         "probe-grad-class": dir_probe_grad_class(net, Xa, y),
-        "random":           torch.randn(base.shape, device=base.device,
-                                        generator=torch.Generator().manual_seed(sham_seed)),
+        # NB: must go through sham_vector -- `torch.randn(..., device=base.device,
+        # generator=torch.Generator())` crashes on CUDA (CPU generator, CUDA draw).
+        "random":           sham_vector(base.shape, sham_seed, base.device),
     }
     return {k: unit(v) for k, v in keys.items()}
 

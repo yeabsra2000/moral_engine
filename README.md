@@ -235,7 +235,7 @@ python dataset_merge.py --review dataset_review.csv   # merge only un-flagged ro
 | `steering_keys.py` | ONE definition of the steering-key family (mean/logreg/lda/probe-grad/-path/-class/random) shared by step6, step7 and `test_steering_collapse.py`, **plus `SteerController`**, which arms the hook per generation and counts how many generations really ran steered |
 | `dry_model.py` | 28-layer, d=64 char-level toy LM that honours the real hook API, used only under `MESE_DRY=1` so step6/step7 can be wired-checked with no download |
 | `test_grouped_cv.py` | CPU self-test of the split logic and the memorization gap |
-| `test_steering_collapse.py` | CPU self-test of the §4 mechanism (rowspace theorem; `-path`/`-class` do NOT escape it; contingency contrast), the sham seed-collision trap, and **section D: the dilution trap — the old loop steers 2 of 40, `SteerController` steers 40 of 40 and `check()` raises on a shortfall** |
+| `test_steering_collapse.py` | CPU self-test of the §4 mechanism (rowspace theorem; `-path`/`-class` do NOT escape it; contingency contrast), the sham seed-collision trap, **section D: the dilution trap** (old loop steers 2 of 40; `SteerController` 40 of 40; `check()` raises on a shortfall), and **section E: device hygiene** (AST scan for `randn(device=+CPU generator)`, the CUDA-only crash) |
 | `check_length_control.py` | CPU self-test (tokenizer only, no model): re-derives the length-only reading control at 10 seeds with its spread |
 | `step5_robust.py` | Observer results: random row, grouped row, template-identity control row, plus per-axis label-permutation + length-only controls |
 | `step6_steer_all.py` | Steerer results: measurability gate, 7 directions (incl. probe-grad/-path/-class), sham, fluency, `[steering audit]` |

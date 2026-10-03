@@ -652,7 +652,9 @@ universal.
   `SteerController` hook. Section D of `test_steering_collapse.py` also reproduces the
   dilution bug on a fake layer (2 of 40 generations steered) and asserts that
   `SteerController` cannot under-apply — the check that was missing when the steering
-  null was written.
+  null was written. Section E adds a device-hygiene check that *can* run on CPU: an AST
+  scan asserting no `torch.randn(...)` pairs `device=` with a default CPU generator,
+  which is the `RuntimeError` that only appears on CUDA (see `results.md` §M10).
 - GPU experiments (Google Colab T4): `pilot.py`, `step2_probe.py`,
   `step3_rigorous.py`, `step4_steer.py`, `step5_robust.py`, `step6_steer_all.py`,
   `step7_sweep.py`.

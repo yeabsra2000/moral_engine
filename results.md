@@ -630,6 +630,53 @@ The honest one-line summary: the mechanism is established, but the empirical nul
 was supposed to explain has to be re-measured, because the experiment that produced
 it never applied its own treatment.
 
+## M10 — Device hygiene: a CPU generator cannot feed a CUDA draw  ✅ FIXED
+Found by the **first real CUDA run** of the M9-fixed step6 (2026-10-03). This is the
+bug the GPU run exists to find, and it is untestable locally.
+
+**The crash:**
+```
+RuntimeError: Expected a 'cuda' device type for generator but found 'cpu'
+  at steering_keys.py, in all_keys -> the "random" (sham) entry:
+  torch.randn(base.shape, device=base.device,
+              generator=torch.Generator().manual_seed(sham_seed))
+```
+`torch.Generator()` defaults to `cpu`; a CUDA draw cannot consume a CPU generator.
+
+**Why no test caught it:** on CPU the identical line runs perfectly — so the local
+suite was green. The bug only exists on CUDA, which is exactly the argument for not
+trusting a green CPU suite with a GPU experiment. (Note also that the dict literal
+evaluated `mean`, `logreg`, `lda`, `probe-grad`, `probe-grad-path` and
+`probe-grad-class` *before* the sham, so all six real keys had already computed
+successfully on CUDA. The failure was isolated to the control draw — the run got as far
+as `all_keys`, past `make_probe` and `probe_cv_acc`, i.e. past the real work.)
+
+**The fix:** `sham_vector(shape, seed, device)` draws on CPU then `.to(device)`. Two
+benefits: it works on either device, and the same seed now yields the **byte-identical**
+sham vector on CPU and CUDA — a control that is exactly reproducible rather than only
+statistically so.
+
+**A latent sibling, fixed at the same time:** the `MESE_DRY` signal injection in
+step6/step7 built `_sig` from CPU tensors (`LAB` and `_dirs` are CPU) and added it to
+`X` / `XMAT`, which live on `DEVICE`. On a CPU box `DEVICE=cpu` and it works; on a GPU
+box `MESE_DRY=1` would raise a device mismatch — and the README explicitly encourages
+running dry modes on Colab. Both now move the tensors with an explicit `.to(...)`.
+
+**The guard (runs on CPU):** scenario E of `test_steering_collapse.py`.
+- *runtime*: `sham_vector` matches a reference CPU draw exactly, is repeatable, and
+  honours the requested device;
+- *static*: an **AST** scan of the six GPU-reachable source files for
+  `torch.randn(..., device=..., generator=...)` where the generator itself has no
+  `device=`. AST rather than regex on purpose — the first regex attempt flagged the
+  very *comments* that document the bug.
+
+**Verified by reintroducing the bug:** with the original line restored, the test fails
+(exit 1) and names the offending file and call — while the runtime path still succeeds
+on CPU, which is the entire reason the static guard has to exist. Reverted afterwards;
+all green.
+
+**Status:** fixed, guarded, and it cost one GPU run rather than a whole paper.
+
 ## TODO (before the final table in the paper)
 - 🔴 **BLOCKING — RE-RUN THE STEERER (M9).** The Step 6 and Step 7 steering numbers
   were produced by a loop that steered only 1 generation in 20, so they are not
