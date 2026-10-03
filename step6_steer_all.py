@@ -67,7 +67,8 @@ except ModuleNotFoundError:                    # dataset.py truly missing -> rea
 except ImportError:                            # older dataset.py without GROUPS
     from dataset import DATA
     GROUPS = None
-from steering_keys import all_keys, print_cos_table, unit, SteerController
+from steering_keys import (all_keys, print_cos_table, unit, SteerController,
+                           stable_seed)
 
 print("CUDA:", torch.cuda.is_available())
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
@@ -75,7 +76,12 @@ DTYPE  = torch.bfloat16 if DEVICE == "cuda" else torch.float32
 MODEL_ID = os.environ.get("MESE_MODEL", "Qwen/Qwen2.5-1.5B-Instruct")
 LAYER = int(os.environ.get("MESE_LAYER", "14"))   # steering layer (see N_LAYERS check below)
 AXES = ["Valence", "Arousal", "Care/Harm", "Fairness"]
-SCALES = [0.0, 1.5, 4.0]
+# Scale grid is the DOSE. An absolute scale is meaningless without ||h|| (reported
+# below as a % of the residual-stream norm), so the grid is swept wide enough to
+# actually find the threshold where fluency breaks: if fluency holds at every scale
+# the treatment was too weak to matter, and "no effect" means "no dose", not "null".
+SCALES = [float(s) for s in os.environ.get(
+    "MESE_SCALES", "0.0,1.5,4.0,10.0,25.0").split(",")]
 DIRECTIONS = ["mean", "logreg", "lda", "probe-grad",
               "probe-grad-path", "probe-grad-class", "random"]
 PROMPTS = [
@@ -276,6 +282,23 @@ def generate(prompt):
                          top_p=0.9, pad_token_id=tok.eos_token_id)
     return tok.decode(out[0][ids['input_ids'].shape[1]:], skip_special_tokens=True)
 
+
+def seed_cell(axis, direction):
+    """Seed from (axis, direction) ONLY -- deliberately NOT from `scale`.
+
+    Common random numbers: every scale of one direction draws from the SAME stream, so
+    the slope tone(max) - tone(0) is a PAIRED difference. Prompt difficulty, which
+    dominates the variance here, cancels instead of being paid twice.
+
+    BUG FIX (2026-10-03). The previous version added `int(round(scale * 1000))` to the
+    seed, so every scale got an INDEPENDENT stream -- precisely the unpaired
+    comparison this function existed to eliminate -- and it seeded from `hash(str)`,
+    which Python 3 randomizes per process, so even the per-direction seed was not
+    reproducible between runs. See steering_keys.stable_seed.
+    """
+    s = stable_seed(axis, direction)
+    torch.manual_seed(s); random.seed(s)
+
 def fluency(text):
     """mean per-token log-likelihood of the text (higher = more fluent English)."""
     ids = tok(text, return_tensors="pt").to(model.device)['input_ids']
@@ -312,6 +335,8 @@ for axis in range(4):
     net = make_probe(Xa, y)
     keys = all_keys(Xa, y, net)      # every steering key, unit-norm; `mean` first
     print_cos_table(keys)            # §4 evidence: where each key POINTS (free)
+    scale0 = {}     # tone at scale 0 per direction -> replicates of NO steering
+    slopes = {}     # direction -> (slope, fluency at the strongest scale)
     for name in DIRECTIONS:
         delta = keys[name].to(model.dtype)
         tones, flu = {}, {}
@@ -321,6 +346,7 @@ for axis in range(4):
                 for _ in range(SAMPLES):
                     # ARM PER GENERATION (SteerController arms, generates, disarms),
                     # so the honest steer-off read below cannot break the treatment.
+                    seed_cell(AXES[axis], name)      # paired slope, see docstring
                     t = STEER.generate(p, delta, scale, LAYER, generate)
                     if not t.strip():           # empty generation -> nothing to score
                         n_empty += 1
@@ -329,12 +355,38 @@ for axis in range(4):
                     fs.append(fluency(t))
             tones[scale] = statistics.mean(ts) if ts else float("nan")
             flu[scale] = statistics.mean(fs) if fs else float("nan")
+        if SCALES[0] == 0.0:
+            scale0[name] = tones[SCALES[0]]
         slope = tones[SCALES[-1]] - tones[SCALES[0]]
-        line = "  ".join(f"{s:>3}={tones[s]:+.2f}" for s in SCALES)
-        print(f"  [{name:>16}] tone  {line}   slope={slope:+.2f}   "
-              f"fluency={statistics.mean(list(flu.values())):.2f}")
+        slopes[name] = (slope, flu[SCALES[-1]])
+        line = "  ".join(f"{s:g}={tones[s]:+.2f}" for s in SCALES)
+        # Fluency is reported PER SCALE, never averaged: averaging across the grid
+        # is what hid dose-response before. If the model is still perfectly fluent at
+        # the strongest scale, the treatment never got strong enough to matter.
+        fl = "  ".join(f"{s:g}={flu[s]:.2f}" for s in SCALES)
+        print(f"  [{name:>16}] tone  {line}   slope={slope:+.2f}")
+        print(f"  {'':>18}  fluency {fl}")
         CELLS.append((AXES[axis], f"{n_pos}/{n_neg}", f"{acc:.2f}", name, f"{slope:+.2f}",
-                      f"{statistics.mean(list(flu.values())):.2f}"))
+                      f"{flu[SCALES[-1]]:.2f}"))
+
+    # ---- noise floor from the scale-0 replicates (free control) ----------------
+    # The hook never fires at scale 0, so these N rows are N independent replicate
+    # measurements of NO steering whatsoever. Their spread IS the run's own noise
+    # floor, so every slope can be reported as a z against it. Without this, "clean
+    # null" and "noisy experiment" are indistinguishable from the numbers alone.
+    if len(scale0) > 1:
+        vals = list(scale0.values())
+        mu = statistics.mean(vals)
+        sd = statistics.stdev(vals)
+        se = sd * (2 ** 0.5)       # slope = diff of two 20-gen means
+        print(f"    [noise floor] scale-0 replicates {[round(v, 2) for v in vals]}")
+        print(f"                  mean={mu:+.3f} sd={sd:.3f}  se(slope)={se:.3f}")
+        print(f"                  a pure-noise run peaks at ~2.4 z, so any |z| below")
+        print(f"                  that is indistinguishable from sampling noise:")
+        for name, (sl, _) in slopes.items():
+            z = abs(sl) / se if se > 1e-9 else float("nan")
+            flag = "  <-- above noise" if z >= 2.4 else ""
+            print(f"                    z({name:>16}) = {z:.2f}   slope={sl:+.2f}{flag}")
 
 # ---- STEERING AUDIT: did the treatment actually get applied? ------------------
 # This is the check whose absence let a 20x-diluted null look "clean".
@@ -343,6 +395,26 @@ print(f"\n[steering audit] {n_steered}/{n_gen} generations ran with the hook LIV
       f"({STEER.n_should_steer} should have been; the rest are the scale=0 baseline).")
 if n_empty:
     print(f"[steering audit] {n_empty} empty generation(s) skipped (no text to score).")
+
+# ---- DOSE: was the treatment ever strong enough to matter? ---------------------
+# A steering scale is an ABSOLUTE number, so it cannot be judged on its own. What
+# makes it meaningful is the perturbation relative to the residual stream it is
+# trying to move. If this table shows every dose below a few percent, a flat result
+# is a statement about the dose, not about the model.
+h_ref, doses = STEER.report_dose()
+if h_ref:
+    print(f"\n[dose] median ||h|| at layer {LAYER} = {h_ref:.2f} "
+          f"(measured BEFORE the add, so this is the un-steered residual norm)")
+    print(f"[dose] scale  ||scale*delta||  = % of ||h||")
+    for s, r in doses.items():
+        print(f"[dose] {s:>6g}  {s * STEER._vlen:>14.2f}  {r * 100:>8.2f}%")
+    strongest = max(doses.values()) if doses else 0.0
+    if strongest < 0.05:
+        print("[dose] WARNING: the strongest treatment moved the residual stream by "
+              f"under 5%. A null at this dose is NOT evidence of no steering.")
+    else:
+        print(f"[dose] the strongest treatment moved the residual stream by "
+              f"{strongest * 100:.2f}% -- large enough that a null here is meaningful.")
 
 print("\n" + "=" * 78)
 print("SUMMARY  (slope = tone at max scale - tone at 0; 'random' is the SHAM control)")

@@ -34,6 +34,7 @@ All functions return an UNNORMALIZED vector unless their name says otherwise;
 the cosine table is reported against).
 """
 import torch
+import zlib
 
 # Distinctive on purpose: a sham generator seeded with 0 would reproduce the
 # caller's own `torch.manual_seed(0); torch.randn(...)` stream exactly, turning
@@ -43,6 +44,35 @@ DEFAULT_SHAM_SEED = 20250802
 
 def unit(v):
     return v / (v.norm() + 1e-8)
+
+
+def _median(xs):
+    """Median of a list, pure-python (no torch/numpy dependency). Empty -> 0.0."""
+    s = sorted(xs)
+    n = len(s)
+    if n == 0:
+        return 0.0
+    return s[n // 2] if n % 2 else 0.5 * (s[n // 2 - 1] + s[n // 2])
+
+
+def stable_seed(*parts):
+    """A DETERMINISTIC seed derived from the given parts.
+
+    BUG FIX (2026-10-03). The obvious `hash(("Valence", "mean"))` is USELESS here:
+    Python 3 randomizes str hashing per process unless PYTHONHASHSEED is pinned, so
+    the same call returns a different number in every run. Any control that claimed
+    to be "reproducible" while seeding from it was reproducible in name only -- and
+    that is precisely the class of bug this project exists to catch.
+
+    `zlib.crc32` is stable across processes, platforms and Python versions (it is
+    specified, unlike `hash`), which is what a control actually needs.
+
+    Deliberately does NOT take `scale`. Seeding per-scale would re-randomize every
+    cell and destroy the common-random-numbers pairing that makes a slope a paired
+    comparison; see `seed_cell` in step6_steer_all.py / step8_dose.py.
+    """
+    key = "\x1f".join(str(p) for p in parts).encode("utf-8")
+    return zlib.crc32(key) & 0x7FFFFFFF
 
 
 def cos(a, b):
@@ -247,6 +277,12 @@ class SteerController:
         self.n_gen = 0              # generations attempted
         self.n_should_steer = 0     # generations at scale != 0
         self.n_steered = 0          # generations that ran with the hook live
+        # Dose diagnostics: norms of the residual stream AT THE STEERING LAYER,
+        # recorded BEFORE the add. See `report_dose` for why this exists.
+        self.h_norms = []
+        self.doses = {}             # scale -> list of relative perturbation per generation
+        self.h_ref = None           # median ||h||: a property of the MODEL, set on first read
+        self._vlen = 0.0            # ||delta||, cached at arm() time
 
     def is_armed(self):
         return self.handle is not None
@@ -262,15 +298,55 @@ class SteerController:
         if not scale:
             return
         self.vec, self.scale, self.layer = vec, float(scale), layer
+        self._vlen = float(vec.float().norm())   # ||delta||, for the relative-dose report
 
         def _h(mod, inp, out):
             # decoder layer returns (hidden_states, past_kv); weights may sit on cpu
             if isinstance(out, tuple):
                 h, rest = out[0], out[1:]
+                # record ||h|| BEFORE the add, so the reference magnitude is the
+                # un-steered residual stream and not a contaminated one
+                self._note_dose(h)
                 return ((h + self.scale * self.vec.to(h.device)),) + rest
+            self._note_dose(out)
             return out + self.scale * self.vec.to(out.device)
 
         self.handle = self.layers[layer].register_forward_hook(_h)
+
+    def _note_dose(self, h):
+        """Accumulate residual norms + relative perturbation for the dose report.
+
+        Relative dose is `||scale*delta|| / ||h||`, i.e. how big the intervention is
+        compared to the signal it is trying to move. An ABSOLUTE scale is
+        uninterpretable on its own: without `||h||` there is no way to tell a
+        sub-threshold nudge from an intervention large enough to break the model.
+        """
+        with torch.no_grad():
+            n = h.float().norm(dim=-1)            # per-token norm
+            med = float(n.median())
+            self.h_norms.append(med)
+        # NOTE: the hook only ever fires at scale != 0 (arm() returns early otherwise),
+        # so there are no scale-0 hook readings. That is fine -- these norms are taken
+        # BEFORE the add, so the first one already measures the UN-steered residual
+        # stream and is a valid model-level reference. Fixing it here (not only in
+        # report_dose) keeps the very first batch of doses from dividing by ~0.
+        if self.h_ref is None:
+            self.h_ref = med
+        if self.scale:
+            self.doses.setdefault(self.scale, []).append(
+                self.scale * self._vlen / max(self.h_ref, 1e-8))
+
+    def report_dose(self):
+        """(median ||h||, {scale: median relative dose}) for everything steered.
+
+        `h_ref` is the median pre-addition residual norm, so it is a property of the
+        MODEL and not of the treatment. The dose returned per scale is
+        `scale * ||delta|| / ||h||`: the size of the intervention relative to the
+        signal being moved. Without it an absolute scale like 4.0 cannot be judged.
+        """
+        if not self.h_norms:
+            return None, {}
+        return self.h_ref, {s: _median(v) for s, v in sorted(self.doses.items())}
 
     def generate(self, prompt, vec, scale, layer, generate_fn):
         """ARM -> generate -> DISARM. The caller cannot forget to re-arm.

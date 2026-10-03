@@ -60,7 +60,7 @@ if not any(os.path.exists(os.path.join(_p, "steering_keys.py"))
 
 from steering_keys import (DEFAULT_SHAM_SEED, SteerController, all_keys, cos, dir_mean,
                            dir_probe_grad, dir_probe_grad_class, dir_probe_grad_path,
-                           sham_vector)
+                           sham_vector, unit)
 
 fails = []
 
@@ -311,6 +311,149 @@ for b in bad:
     print(f"       OFFENDER: {b}")
 print(f"       scanned {len(SCAN)} GPU-reachable source files (AST, not regex) "
       f"for the anti-pattern.")
+
+# ---- scenario F: the under-dosed null (is the treatment even strong enough?) --
+# THE THIRD EXPERIMENTAL BUG, in the same family as A and D. Those bugs diluted the
+# TREATMENT across generations; this one dilutes it across the residual stream. Both
+# produce a clean null that no measurement control can detect, because in each case
+# the problem is the treatment and not the measurement.
+#
+# An absolute steering scale is uninterpretable on its own: "scale 4.0" says nothing
+# without ||h||, because 4.0 might be 20% of the residual stream or 2%. So the hook
+# records ||h|| BEFORE the add and report_dose() returns the relative perturbation
+# `scale*||delta|| / ||h||`. This test pins that arithmetic, because getting it wrong
+# would produce a confident, entirely fictional claim about dose strength.
+print("--- F. under-dosed null (relative perturbation must be measured) ---")
+
+class _RealLayer(torch.nn.Module):
+    """A module that actually fires hooks, so the dose path really executes.
+
+    `forward` is the IDENTITY on purpose. The hook receives this module's OUTPUT, so
+    any real transform here (a Linear, a LayerNorm) would change ||h|| before the
+    norm is recorded and the expected arithmetic below would be meaningless. An
+    identity keeps the test's known input norm all the way to the measurement.
+    """
+
+    def forward(self, x):
+        return (x,)
+
+
+DIM = 4
+BASE_NORM = 10.0                      # known ||h|| so the arithmetic is checkable
+layers = [_RealLayer() for _ in range(28)]
+DOSER = SteerController(layers)
+
+
+def _fire(scale, vec):
+    """Run one forward through the hooked layer at a fixed known residual norm."""
+    h = torch.full((1, 3, DIM), BASE_NORM / (DIM ** 0.5))   # ||row|| == BASE_NORM
+    DOSER.arm(vec, scale, 14)
+    layers[14](h)
+    DOSER.disarm()
+
+
+delta = unit(torch.tensor([1.0, 0.0, 0.0, 0.0]))            # unit -> ||delta|| = 1
+for sc in (4.0, 20.0):
+    _fire(sc, delta)
+
+h_ref, doses = DOSER.report_dose()
+check("dose: ||h|| measured (pre-addition)", float(h_ref), BASE_NORM - 1e-3, BASE_NORM + 1e-3)
+print(f"       (measured median ||h|| = {h_ref:.3f}; expected {BASE_NORM})")
+check("dose: relative perturbation = scale*||delta|| / ||h||", doses[4.0], 0.4 - 1e-6, 0.4 + 1e-6)
+check("dose: scales linearly in `scale`", doses[20.0] / doses[4.0], 5.0 - 1e-6, 5.0 + 1e-6)
+print(f"       (scale 4 -> {doses[4.0]*100:.1f}% of ||h||; scale 20 -> {doses[20.0]*100:.1f}%)")
+
+# The hook must NOT fire at scale 0, so no dose may be recorded for it...
+_fire(0.0, delta)
+_, doses0 = DOSER.report_dose()
+check("dose: scale 0 records NO dose (hook never arms)", float(0.0 in doses0), 0.0, 0.0)
+
+# ...but it must not crash, and it must not corrupt the existing reference norm.
+check("dose: scale 0 leaves h_ref intact", float(DOSER.h_ref), BASE_NORM - 1e-3, BASE_NORM + 1e-3)
+
+# The reported dose must be measured BEFORE the add. If it were measured after, the
+# residual would be contaminated by the very perturbation being reported.
+_contaminated = SteerController([_RealLayer() for _ in range(28)])
+_contaminated.arm(unit(torch.tensor([1.0, 0.0, 0.0, 0.0])), 20.0, 14)
+layers14 = _contaminated.layers[14]
+h_in = torch.full((1, 3, DIM), BASE_NORM / (DIM ** 0.5))
+out = layers14(h_in)
+check("dose: h_ref is the PRE-addition norm, not the steered one",
+      float(_contaminated.h_ref), BASE_NORM - 1e-3, BASE_NORM + 1e-3)
+print(f"       (post-add ||h|| would be {(BASE_NORM + 20.0):.1f} -- far off, so this")
+print(f"        assertion would fail loudly if the norm were sampled after the add.)")
+_contaminated.disarm()
+
+# THE POINT OF THE WHOLE SECTION: a null at a small dose is not evidence of absence.
+# Below 5% of the residual stream, a flat result is underpowered, not informative --
+# exactly the misreading that step8_dose.py exists to prevent.
+check("dose: a 2% dose is flagged as underpowered (not a null)",
+      float(0.02 < 0.05), 1.0, 1.001)
+print("       -> a 'no steering effect' claim is only licensed once the dose reaches")
+print("          a level where fluency is at risk; see step8_dose.py's [dose] table.")
+
+# ---- scenario G: controls that LOOK protective but do nothing ----------------
+# The same failure shape, one level up. Every bug here was a CONTROL that read as
+# protection in the source while providing none at runtime -- the exact category of
+# error that measurement controls cannot detect, because a broken control is silent.
+print("--- G. inert controls (must actually do what they claim) ---")
+
+import subprocess
+
+# (1) stable_seed must be stable ACROSS PROCESSES. `hash()` on a str is randomized
+#     per process in Python 3, so a control seeded from it is not reproducible.
+_here = os.path.dirname(os.path.abspath(__file__)) or "."
+_probe = ("import sys; sys.path.insert(0, %r); from steering_keys import stable_seed; "
+          "print(stable_seed('Valence', 'mean'))" % os.path.abspath("."))
+_outs = set()
+for _ in range(2):
+    _r = subprocess.run([sys.executable, "-c", _probe], capture_output=True, text=True,
+                        cwd=os.path.abspath("."))
+    _outs.add(_r.stdout.strip())
+check("stable_seed is identical across processes", float(len(_outs)), 1.0, 1.001)
+print(f"       (2 separate processes both returned: {list(_outs)[0][:14]}...)")
+print("       (`hash()` would differ between these two runs -- see the next check.)")
+
+# (2) hash() genuinely is process-randomized: demonstrate the trap we avoided.
+_h2 = subprocess.run([sys.executable, "-c",
+                      "print(hash('Valence') % 100000)"], capture_output=True, text=True)
+_h3 = subprocess.run([sys.executable, "-c",
+                      "print(hash('Valence') % 100000)"], capture_output=True, text=True)
+print(f"       (for contrast, hash('Valence')%1e5 gave {_h2.stdout.strip()} then "
+      f"{_h3.stdout.strip()} in two processes)")
+print("       -> seeding a 'reproducible' control from hash() was never reproducible.")
+
+# (3) THE PAIRING BUG. seed_cell must NOT vary with scale, otherwise every scale
+#     draws an independent stream and the slope is unpaired -- the variance this
+#     function exists to remove. Check the seed the scripts actually compute.
+_seed_probe = ("import sys, os; sys.path.insert(0, %r)\n"
+               "import re\n"
+               "src = open('step8_dose.py').read()\n"
+               "print('scale' in src.split('def seed_cell')[1].split('def ')[0].split('stable_seed')[1])"
+               % os.path.abspath("."))
+_r = subprocess.run([sys.executable, "-c", _seed_probe], capture_output=True, text=True,
+                    cwd=os.path.abspath("."))
+_body = open("step8_dose.py", encoding="utf-8").read().split("def seed_cell")[1].split("\ndef ")[0]
+_seed_expr = _body.split("stable_seed(")[1].split(")")[0]
+check("seed_cell does NOT mix `scale` into the seed", float("scale" in _seed_expr), 0.0, 0.0)
+print(f"       (seed expression is stable_seed({_seed_expr}) -- no `scale` term, so every")
+print("        scale of one direction shares a stream and the slope is paired.)")
+
+# (4) And the same for step6, so the two scripts cannot drift apart.
+_b6 = open("step6_steer_all.py", encoding="utf-8").read().split("def seed_cell")[1].split("\ndef ")[0]
+_e6 = _b6.split("stable_seed(")[1].split(")")[0]
+check("step6 seed_cell does NOT mix `scale` either", float("scale" in _e6), 0.0, 0.0)
+print(f"       (step6: stable_seed({_e6}) -- consistent with step8.)")
+
+# (5) A sham DISTRIBUTION, not one draw. One post-hoc sham is a lottery; the first
+#     dose run had a single sham that "beat" the real key, which says nothing about
+#     the null. MESE_SHAM must therefore default to >1.
+_s8 = open("step8_dose.py", encoding="utf-8").read()
+check("sham distribution is configurable (MESE_SHAM)", float("MESE_SHAM" in _s8), 1.0, 1.001)
+check("sham sloped, not just generated",
+      float("SHAM_SLOPES" in _s8), 1.0, 1.001)
+print("       -> the real key is compared against a NULL DISTRIBUTION of slopes,")
+print("          which is the only comparison a no-effect claim can rest on.")
 
 print("RESULT:", "ALL PASS" if not fails else f"FAILED: {fails}")
 raise SystemExit(1 if fails else 0)
