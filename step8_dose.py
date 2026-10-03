@@ -247,9 +247,80 @@ with torch.no_grad():
     pv = torch.sigmoid(net(Xa)).view(-1).cpu().numpy()
 acc = float(((pv > 0.5).astype(float)
              == (y.view(-1) > 0).float().cpu().numpy()).mean())
-print(f"probe in-sample accuracy = {acc:.2f}  (gate {MIN_PROBE_ACC})")
-if not (acc >= MIN_PROBE_ACC):
-    raise SystemExit("Axis not measurable -> no steering claim possible.")
+# IN-SAMPLE accuracy is optimistic by construction: `net` was just fit on Xa. The
+# probe is the MEASURING INSTRUMENT here -- it is what converts text into the tone
+# number -- so an overfit instrument inflates every tone reading, including the sham
+# ones. Report the honest template-grouped held-out accuracy alongside it, because
+# step6 established that this gap is large on this dataset (Valence: 0.72 grouped
+# vs 0.82 random-split, and the in-sample number is 1.00).
+_cv, _groups = None, None
+try:
+    if GROUPS:
+        _groups = [GROUPS[i] for i in torch.nonzero(act).view(-1).tolist()]
+except Exception as _e:
+    print(f"[warn] GROUPS unavailable ({_e}) -> held-out accuracy not computed.")
+
+
+def grouped_heldout_acc(Xf, yf, grp, hidden=32, k=5, epochs=500):
+    """Template-grouped held-out accuracy, inline (no cross-script import).
+
+    Deliberately NOT `from step6_steer_all import probe_cv_acc`: importing that module
+    EXECUTES the entire steering experiment (it is a script, not a library), so the
+    import would re-run everything. Duplicating ~15 lines is the lesser evil, and
+    this function is the definition of the honest instrument quality anyway.
+    """
+    uniq = sorted(set(grp))
+    fold_of = {g: i % k for i, g in enumerate(uniq)}
+    accs = []
+    for f in range(k):
+        te = [i for i in range(len(yf)) if fold_of[grp[i]] == f]
+        tr = [i for i in range(len(yf)) if fold_of[grp[i]] != f]
+        if not te or not tr:
+            continue
+        n = torch.nn.Sequential(torch.nn.Linear(Xf.size(1), hidden), torch.nn.SiLU(),
+                                torch.nn.Linear(hidden, 1)).to(Xf.device)
+        opt = torch.optim.Adam(n.parameters(), lr=1e-3, weight_decay=1e-4)
+        ytr = (yf[tr] > 0).float().to(Xf.device)
+        for _ in range(epochs):
+            opt.zero_grad()
+            torch.nn.functional.binary_cross_entropy_with_logits(
+                n(Xf[tr]).view(-1), ytr).backward()
+            opt.step()
+        with torch.no_grad():
+            pred = (torch.sigmoid(n(Xf[te]).view(-1)) > 0.5).long().cpu()
+        accs.append((pred == (yf[te] > 0).long().cpu()).float().mean().item())
+    return statistics.fmean(accs) if accs else None
+
+
+if _groups and not DRY:
+    _cv = grouped_heldout_acc(Xa, y.cpu(), _groups)
+    print(f"probe HELD-OUT (template-grouped) accuracy = {_cv:.2f}   "
+          f"<-- the honest instrument quality; gate {MIN_PROBE_ACC}")
+    print("       (in-sample accuracy below is optimistic: `net` was fit on exactly")
+    print("        this data. The gap between the two IS the overfitting.)")
+    _gate = _cv
+elif DRY:
+    # The stub's activations carry no template structure, so the honest gate always
+    # fails there and would abort before the steering code ever runs -- making the
+    # wiring check test nothing. A DRY run therefore reports in-sample only and says
+    # so loudly; its numbers remain meaningless.
+    _gate = acc
+    print("[DRY RUN] skipping the grouped held-out gate: the stub has no template")
+    print("          structure, so it cannot be honestly evaluated. In-sample only.")
+else:
+    _gate = acc
+    print("[warn] no template groups -> cannot compute honest held-out accuracy.")
+    print("        Gate uses in-sample, so treat any verdict as PRELIMINARY.")
+print(f"probe in-sample accuracy = {acc:.2f}")
+if _cv is not None:
+    print(f"probe HELD-OUT (template-grouped) accuracy = {_cv:.2f}   "
+          f"<-- the honest instrument quality; gate {MIN_PROBE_ACC}")
+    _gate = _cv
+else:
+    _gate = acc
+if not (_gate >= MIN_PROBE_ACC):
+    raise SystemExit("Axis not measurable under the honest (grouped held-out) "
+                     "protocol -> no steering claim possible.")
 
 keys = all_keys(Xa, y, net)
 _c = float(torch.nn.functional.cosine_similarity(keys['mean'], keys['random'], dim=0))
@@ -419,15 +490,30 @@ if N_SHAM > 1:
         print(f"  range: [{min(slopes):+.3f}, {max(slopes):+.3f}]")
         if sd > 1e-9:
             z = (real_m - mu) / sd
+            # BOTH tests, because with n=6 the parametric z is optimistic. The
+            # empirical test asks the question that actually matters -- how often does
+            # a RANDOM direction beat the real key -- and needs no distributional
+            # assumption. Report both; if they disagree, quote the weaker one.
+            n_ge = sum(1 for v in slopes if v >= real_m)
+            p_emp = (1 + n_ge) / (1 + len(slopes))     # add-one, never claims p=0
             print(f"\n  real `mean` key: {real_m:+.3f} +/- {real_se:.3f} "
                   f"->  z vs sham dist = {z:+.2f}")
-            if abs(z) < 2.0:
-                print("  VERDICT: NOT DISTINGUISHABLE from a random direction.")
-                print("           Report as underpowered/no effect -- NOT as a steering")
-                print("           result and NOT as evidence the model cannot be steered.")
+            print(f"  empirical: {n_ge}/{len(slopes)} sham directions reach it "
+                  f"(add-one p = {p_emp:.3f})")
+            _sig = min(abs(z) >= 2.0, p_emp < 0.05)
+            if not _sig:
+                print("\n  VERDICT: NOT SEPARABLE from random directions.")
+                print("           The two tests disagree or are both marginal, so this")
+                print("           is a PRELIMINARY candidate effect at best. Treat as")
+                print("           underpowered -- NOT as a steering result, and NOT as")
+                print("           evidence that the model cannot be steered.")
+                print("           Confirm with more shams (MESE_SHAM=15) and a second")
+                print("           axis before writing it up.")
             else:
-                print("  VERDICT: separable from the sham distribution. This is a real")
-                print("           steering effect; re-run to confirm before quoting.")
+                print("\n  VERDICT: separable from the sham distribution on BOTH tests.")
+                print("           Promising -- but n=6 shams is a thin null. Re-run to")
+                print("           confirm, and check the dose-response is monotone")
+                print("           before writing it up.")
     print(f"\n[steering audit incl. shams] {n_steered2}/{n_gen2} hook LIVE "
           f"({STEER.n_should_steer} should have been).")
 print()
