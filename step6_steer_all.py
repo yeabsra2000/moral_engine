@@ -41,6 +41,8 @@ for _p in (_HERE, os.getcwd()):
     if _p not in sys.path:
         sys.path.insert(0, _p)
 _REQUIRED = ["dataset.py", "steering_keys.py"]
+if os.environ.get("MESE_DRY", "") not in ("", "0", "false", "False"):
+    _REQUIRED.append("dry_model.py")     # only a DRY run needs it; see MESE_DRY below
 _MISSING = [f for f in _REQUIRED
             if not any(os.path.exists(os.path.join(_p, f))
                        for _p in (_HERE, os.getcwd()))]
@@ -65,7 +67,7 @@ except ModuleNotFoundError:                    # dataset.py truly missing -> rea
 except ImportError:                            # older dataset.py without GROUPS
     from dataset import DATA
     GROUPS = None
-from steering_keys import all_keys, print_cos_table, unit
+from steering_keys import all_keys, print_cos_table, unit, SteerController
 
 print("CUDA:", torch.cuda.is_available())
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
@@ -87,8 +89,16 @@ SAMPLES = 4          # generations per prompt per scale
 GEN_LEN = 18
 MIN_PROBE_ACC = 0.60  # below this the axis cannot be measured -> no steering claim
 
+# ---- MESE_DRY=1: swap the real model for dry_model.py's stub ------------------
+# Same call surface (hooks / generate / logits) but a 28-layer d=64 char-level toy,
+# so the key + cosine + control + steering code can be wiring-checked on a laptop
+# CPU with no download. Its numbers are MEANINGLESS and it logs to its own file.
+# Read BEFORE the QUICK block below, because a DRY run also wants the tiny grid.
+DRY = os.environ.get("MESE_DRY", "") not in ("", "0", "false", "False")
+
 # ---- QUICK mode: MESE_QUICK=1 python step6_steer_all.py  (smoke test first!) ----
-QUICK = os.environ.get("MESE_QUICK", "") not in ("", "0", "false", "False")
+# A DRY run implies QUICK: the point is the code paths, not the numbers.
+QUICK = os.environ.get("MESE_QUICK", "") not in ("", "0", "false", "False") or DRY
 if QUICK:
     PROMPTS = PROMPTS[:3]
     SAMPLES = 2
@@ -96,7 +106,10 @@ if QUICK:
     DIRECTIONS = ["mean", "probe-grad", "random"]
 
 # ---- tee everything to a log file: a dropped Colab session must not lose the run ----
-LOG = os.environ.get("MESE_LOG", "results_step6.txt")
+# A DRY run gets its OWN log by default, so a wiring check can never mix into (or be
+# mistaken for) real model output. Override with MESE_LOG if you want it elsewhere.
+LOG = os.environ.get("MESE_LOG",
+                     "results_step6_dry.txt" if DRY else "results_step6.txt")
 class _Tee:
     """Mirror stdout into a log file; never let logging break the run."""
     def __init__(self, *streams): self.streams = streams
@@ -115,15 +128,24 @@ class _Tee:
                 pass
 _log = open(LOG, "a", encoding="utf-8")
 _log.write(f"\n===== step6 run {datetime.datetime.now():%Y-%m-%d %H:%M:%S} "
-           f"quick={QUICK} =====\n")
+           f"quick={QUICK} dry={DRY} =====\n")
 sys.stdout = _Tee(sys.__stdout__, _log)
-print(f"[log] writing to {LOG}  |  QUICK={QUICK} "
+print(f"[log] writing to {LOG}  |  QUICK={QUICK} DRY={DRY} "
       f"(prompts={len(PROMPTS)}, samples={SAMPLES}, scales={SCALES}, directions={DIRECTIONS})")
-print("Full run: ~20-40 min on a T4. QUICK run: ~4-6 min. Keep the browser tab open.")
+if DRY:
+    print("*** DRY RUN: model NOT loaded, activations are a toy stub. Results are MEANINGLESS.")
+else:
+    print("Full run: ~20-40 min on a T4. QUICK run: ~4-6 min. Keep the browser tab open.")
 
 torch.manual_seed(0); random.seed(0)
-tok = AutoTokenizer.from_pretrained(MODEL_ID)
-model = AutoModelForCausalLM.from_pretrained(MODEL_ID, torch_dtype=DTYPE, device_map="auto")
+if DRY:
+    print("[DRY RUN] model NOT loaded; dry_model.py stub (28 layers, d=64, char vocab).")
+    print("          Validates plumbing (hooks -> capture -> keys -> steering -> log) only.")
+    from dry_model import build_dry
+    tok, model = build_dry()
+else:
+    tok = AutoTokenizer.from_pretrained(MODEL_ID)
+    model = AutoModelForCausalLM.from_pretrained(MODEL_ID, torch_dtype=DTYPE, device_map="auto")
 model.eval()
 
 # ---- depth guard: a different model may have fewer layers than MESE_LAYER ----
@@ -147,6 +169,19 @@ for sentence, _, _ in DATA:
 handle.remove()
 X = torch.stack(captured).to(DEVICE); X = X / (X.norm(dim=1, keepdim=True) + 1e-8)
 LAB = torch.tensor([lbl for _, lbl, _ in DATA], dtype=torch.float32)
+if DRY:
+    # The stub's activations carry no tone signal, so every axis would fail the
+    # measurability gate and the key/steering code below would never execute --
+    # i.e. the wiring check would test nothing that matters. Inject a synthetic
+    # label-correlated component ONLY so the gates open. Still meaningless.
+    _gs = torch.Generator().manual_seed(7)
+    _dirs = torch.randn(4, X.size(1), generator=_gs)
+    _dirs = _dirs / _dirs.norm(dim=1, keepdim=True)
+    _sig = sum(LAB[:, a].unsqueeze(1) * _dirs[a].unsqueeze(0) for a in range(4))
+    X = X + 1.5 * _sig
+    X = X / (X.norm(dim=1, keepdim=True) + 1e-8)
+    print("[DRY RUN] injected a synthetic label-correlated component into X so the axis")
+    print("          gates open and the key/cosine/steering code actually runs.")
 
 def make_probe(Xa, y):  # small MLP measuring probe on the active samples for this axis
     xs, ys = Xa, (y > 0).float().to(Xa.device)
@@ -224,21 +259,13 @@ def capture_vec(text):
     h.remove()
     v = cap[0]; return v / (v.norm() + 1e-8)
 
-@dataclass
-class Ctx: dirn=None; handle=None
-steer_ctx = Ctx()
-def attach_steer(vec, scale):
-    if steer_ctx.handle: steer_ctx.handle.remove(); steer_ctx.handle = None
-    if scale:
-        steer_ctx.dirn = vec
-        s = scale
-        def _h(mod, inp, out):
-            # decoder layer returns (hidden_states, past_kv); weights may sit on cpu (device_map)
-            if isinstance(out, tuple):
-                h, rest = out[0], out[1:]
-                return ((h + s * steer_ctx.dirn.to(h.device)),) + rest
-            return out + s * steer_ctx.dirn.to(out.device)
-        steer_ctx.handle = model.model.layers[LAYER].register_forward_hook(_h)
+# ---- steering hook: owned by SteerController (steering_keys.py) --------------
+# The controller ARMS the hook per GENERATION and disarms it before returning, so
+# the honest steer-off read below is automatic. Doing this by hand is how the
+# 'dilution trap' happens: arm once per scale, disarm on the first sample, and only
+# 1 in (prompts*samples) generations is steered -- a real effect then reads as ~e/20,
+# i.e. as a null. `STEER.check()` below raises if that ever recurs.
+STEER = SteerController(model.model.layers)
 
 def generate(prompt):
     ids = tok(prompt, return_tensors="pt").to(model.device)
@@ -249,6 +276,8 @@ def generate(prompt):
 def fluency(text):
     """mean per-token log-likelihood of the text (higher = more fluent English)."""
     ids = tok(text, return_tensors="pt").to(model.device)['input_ids']
+    if ids.size(1) < 2:          # empty/1-token text: mean() of nothing is nan, not 0
+        return float("nan")      # (callers skip empty text; this is belt-and-braces)
     with torch.no_grad():
         logits = model(ids).logits
     logp = torch.nn.functional.log_softmax(logits[:, :-1], dim=-1)
@@ -261,6 +290,7 @@ print(f"Measuring-probe gate: template-grouped held-out accuracy must be >= {MIN
 print("=" * 78)
 
 CELLS = []   # (axis, n pos/neg, probe acc, direction, slope, fluency)
+n_empty = 0  # generations that came back empty (nothing to score; skipped)
 for axis in range(4):
     act = LAB[:, axis].ne(0)
     y = LAB[:, axis][act].to(DEVICE)
@@ -283,22 +313,33 @@ for axis in range(4):
         delta = keys[name].to(model.dtype)
         tones, flu = {}, {}
         for scale in SCALES:
-            attach_steer(delta, scale)
             ts, fs = [], []
             for p in PROMPTS:
                 for _ in range(SAMPLES):
-                    t = generate(p)
-                    attach_steer(delta, 0.0)        # clear steer to measure honestly
-                    ts.append(tone(net, capture_vec(t)))
+                    # ARM PER GENERATION (SteerController arms, generates, disarms),
+                    # so the honest steer-off read below cannot break the treatment.
+                    t = STEER.generate(p, delta, scale, LAYER, generate)
+                    if not t.strip():           # empty generation -> nothing to score
+                        n_empty += 1
+                        continue
+                    ts.append(tone(net, capture_vec(t)))   # hook already OFF: honest
                     fs.append(fluency(t))
-            attach_steer(delta, 0.0)
-            tones[scale], flu[scale] = statistics.mean(ts), statistics.mean(fs)
+            tones[scale] = statistics.mean(ts) if ts else float("nan")
+            flu[scale] = statistics.mean(fs) if fs else float("nan")
         slope = tones[SCALES[-1]] - tones[SCALES[0]]
         line = "  ".join(f"{s:>3}={tones[s]:+.2f}" for s in SCALES)
         print(f"  [{name:>16}] tone  {line}   slope={slope:+.2f}   "
               f"fluency={statistics.mean(list(flu.values())):.2f}")
         CELLS.append((AXES[axis], f"{n_pos}/{n_neg}", f"{acc:.2f}", name, f"{slope:+.2f}",
                       f"{statistics.mean(list(flu.values())):.2f}"))
+
+# ---- STEERING AUDIT: did the treatment actually get applied? ------------------
+# This is the check whose absence let a 20x-diluted null look "clean".
+n_steered, n_gen = STEER.check()
+print(f"\n[steering audit] {n_steered}/{n_gen} generations ran with the hook LIVE "
+      f"({STEER.n_should_steer} should have been; the rest are the scale=0 baseline).")
+if n_empty:
+    print(f"[steering audit] {n_empty} empty generation(s) skipped (no text to score).")
 
 print("\n" + "=" * 78)
 print("SUMMARY  (slope = tone at max scale - tone at 0; 'random' is the SHAM control)")

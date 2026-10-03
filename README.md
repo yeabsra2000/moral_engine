@@ -30,9 +30,20 @@ artifacts, and the repo now refuses to report them.
    synthetic set that is linearly separable *by construction* still earns only **0.75**
    under this protocol, so the linear probe is not merely undertrained. The axis is
    therefore nonlinear *and* readable — but the keys in (1) cannot reach it.
-3. **Hence steering is null, and the null survives a search.** Seven keys across layers
-   {14, 20, 26} × {mean, last-token} pooling × 4 axes move tone no further than a random
-   sham direction: permutation **p = 0.438** over the whole 24-cell grid.
+3. 🔴 **Hence steering is null — but that result is WITHDRAWN, and the reason it is
+   worth reading.** Seven keys across layers {14, 20, 26} × {mean, last-token} pooling ×
+   4 axes appeared to move tone no further than a random sham (permutation **p = 0.438**
+   over the 24-cell grid). On wiring a CPU dry-run mode next to the mechanism tests, the
+   steering loop turned out to arm the hook **once per scale** and disarm it on the
+   **first sample**, so only 1 of every (prompts × samples) = 20 generations in the
+   "steered" arm was steered — measured at **2 of 40**, a **0.050×** dilution. A real
+   effect of size *e* would read as ~*e*/20, i.e. straight into the ±0.05 sham noise
+   floor, which is exactly the pattern the numbers showed. **Every control we had still
+   passed**, because the bug dilutes the *treatment*, not the *measurement*: the probe
+   gate tests the readout, the sham is diluted by the same factor, the permutation test
+   compares two dilutions, and fluency is untouched. The loop now arms per generation
+   and audits itself (`SteerController`, `[steering audit] N/N` on every run); **re-run
+   step6/step7 on GPU before citing any steering number.** Full account: `results.md` M9.
 4. **The collapse is contingent, not tautological — which is what makes it a finding.**
    On a synthetic *nonlinear* boundary the probe key points well away from `mean`
    (measured cos **0.39**) while still lying inside `rowspace(W₁)`. So the subspace theorem
@@ -41,12 +52,21 @@ artifacts, and the repo now refuses to report them.
    activations (0.85–0.98). Two separate claims — do not conflate them.
 5. **Two controls carry the result.** Random train/test splits are inflated to **0.76–0.93**
    by template identity *alone* — so grouped CV is the honest protocol. A reading is only
-   accepted if the length-only and label-permutation controls stay silent. Three
-   control-design traps were found and fixed along the way (see `results.md` M7); a fourth
-   (a sham generator seeded with the caller's own seed reproduces the ground-truth
-   direction exactly) is guarded by `test_steering_collapse.py`.
+   accepted if the length-only and label-permutation controls stay silent. Control-design
+   traps found and fixed along the way: three in `results.md` M7, a fourth (a sham
+   generator seeded with the caller's own seed reproduces the ground-truth direction
+   exactly) guarded by `test_steering_collapse.py`, and a fifth — the **dilution trap**
+   in (3), which is different in kind from the others: it is the only one where the
+   whole control panel stays green while the experiment measures nothing. For that
+   reason the repo now also audits the *treatment* (`SteerController`), not just the
+   measurement.
 
 Full numbers, corrections and provenance: **`results.md`**. Write-up: **`paper.md`**.
+
+> ⚠️ **The committed `results_step6.txt` and `results_step7.txt` are diluted runs.**
+> Their *reading* accuracies, *cosine tables* and *reading controls* are fine (computed
+> without generation); their *steering slopes* and *p = 0.438* are not evidence of
+> anything. Re-run step6/step7 before quoting them.
 
 ## Reproduce (none of this needs a GPU)
 
@@ -54,13 +74,21 @@ Full numbers, corrections and provenance: **`results.md`**. Write-up: **`paper.m
 python test_grouped_cv.py          # fold invariants + template-memorization control
 python test_probe_calibration.py   # catches vacuous controls; calibrates the linear probe
 python test_reading_controls.py    # length/permutation controls vs synthetic ground truth
-python test_steering_collapse.py   # WHY probe-based steering cannot beat a sham (§4 mechanism)
+python test_steering_collapse.py   # §4 mechanism (rowspace) + the dilution/treatment audit
 python check_length_control.py     # re-derives the length control (tokenizer only, no model)
 MESE_DRY=1 MESE_QUICK=1 python step5_robust.py   # end-to-end wiring check, no model (~5 min)
+MESE_DRY=1 python step6_steer_all.py             # steerer wiring check, no model
+MESE_DRY=1 python step7_sweep.py                 # sweep wiring check, no model
 ```
 
+Each dry run logs to its own `_dry` file (never a real result) and the two steerer ones
+end with `[steering audit] N/N generations ran with the hook LIVE` — that line must be
+100%, and it is the check whose absence let a 20×-diluted null look clean.
+
 The GPU experiments (below) produce `results_step5.txt`, `results_step6.txt`,
-`results_step7.txt`, which are committed and cited in `results.md`.
+`results_step7.txt`, which are committed and cited in `results.md` — **but the step6 and
+step7 logs are from the diluted loop and are withdrawn pending a re-run** (see
+`results.md` M9).
 
 ## A. Dataset — runs anywhere (no GPU, ~5 s)
 ```bash
@@ -83,9 +111,12 @@ Setup: `Runtime → Change runtime type → T4 GPU`, then run these cells:
 !pip install -q transformers accelerate
 
 # 3) upload these files into /content (drag & drop, or the folder icon):
-#    dataset.py  probe_cv.py  step5_robust.py  step6_steer_all.py  step7_sweep.py
-#    analyze_step7.py  (CPU-only; it can equally be run locally on a downloaded log)
-#    check_length_control.py  (CPU-only, tokenizer only -- re-derives the length control)
+#    dataset.py  probe_cv.py  steering_keys.py  step5_robust.py  step6_steer_all.py
+#    step7_sweep.py  analyze_step7.py
+#    check_length_control.py  test_*.py  (CPU-only, no model needed)
+#    steering_keys.py is REQUIRED by step6/step7 -- omitting it stops the run
+#    immediately with "MISSING FILE(S): steering_keys.py".
+#    dry_model.py only if you intend to use MESE_DRY=1 (no model download).
 #    or pull them from Drive if you keep the project there:
 # from google.colab import drive; drive.mount('/content/drive')
 # %cd /content/drive/MyDrive/moral_engine
@@ -109,12 +140,17 @@ Setup: `Runtime → Change runtime type → T4 GPU`, then run these cells:
 #     tokenizer, so it is a cheap way to verify a length claim off-GPU:
 !python check_length_control.py
 
-# 4c) OPTIONAL, but cheapest possible check: run step5 with NO model at all
+# 4c) OPTIONAL, but cheapest possible check: run the analysis with NO model at all
 #     (~5 min on CPU, measured 305 s). Activations are replaced by seeded noise, so it
 #     only proves the script runs end to end (probes -> controls -> flags -> log)
 #     before you spend GPU time. Its numbers are meaningless and it writes
 #     results_step5_dry.txt, never the real log.
 !MESE_DRY=1 MESE_QUICK=1 python step5_robust.py
+#     The same flag works on the steerer scripts, and there it matters MORE: it is
+#     what would have caught the dilution bug. Each ends with a
+#     "[steering audit] N/N generations ran with the hook LIVE" line that must be 100%.
+!MESE_DRY=1 python step6_steer_all.py
+!MESE_DRY=1 python step7_sweep.py
 
 # 5) SMOKE TEST first (~2-4 min). Confirms the model, hooks and log file work.
 !MESE_QUICK=1 python step5_robust.py
@@ -162,13 +198,17 @@ different depth), so the whole study can be re-run on another model without edit
 Qwen2.5-0.5B has 24 layers, Llama-3.2-1B has 16, Qwen2.5-1.5B has 28 — pick layers at
 a similar *relative* depth (~50%) and log which model produced each log.
 
-`MESE_DRY=1` (step 4c above) runs `step5_robust.py` with **no model at all**: the
-activations are seeded noise, so all accuracies it prints are ~chance and meaningless.
-It exists to catch wiring errors (an undefined name, a broken control, a log that
-cannot be written) in ~5 min on CPU (~305 s measured in QUICK mode) instead of after a
-model download, and it writes
-`results_step5_dry.txt` so a wiring check can never be mistaken for a real result.
-A healthy dry run must print **zero** `CONFOUND WARNING` / `LEAK WARNING` lines — on
+`MESE_DRY=1` (step 4c above) runs a script with **no model at all**. For
+`step5_robust.py` the activations are seeded noise, so all accuracies it prints are
+~chance and meaningless. For `step6_steer_all.py` / `step7_sweep.py` it swaps in
+`dry_model.py`, a 28-layer, d=64 char-level toy that honours the real hook API, and
+injects a synthetic label signal *purely so the measurability gates open* and the
+key/cosine/control/steering code actually executes — otherwise every axis would fail the
+gate and the dry run would test nothing. It exists to catch wiring errors (an undefined
+name, a broken control, a log that cannot be written, a treatment that is not applied)
+in minutes on CPU instead of after a model download, and it writes
+`results_step*_dry.txt` so a wiring check can never be mistaken for a real result.
+A healthy step5 dry run must print **zero** `CONFOUND WARNING` / `LEAK WARNING` lines — on
 noise the length and permutation controls sit at 0.31–0.50 and 0.47–0.49, nowhere near
 their firing bars (length must reach the measured probe; permutation must reach 0.65).
 
@@ -192,12 +232,13 @@ python dataset_merge.py --review dataset_review.csv   # merge only un-flagged ro
 | `dataset_hard.py` | curated hard set (surface-neutral concrete events, mirrored pairs) |
 | `dataset_merge.py` | merge + final gate -> `dataset.py` (`DATA`, `GROUPS`) |
 | `probe_cv.py` | model-free CV harness (random vs grouped) + template-identity control |
-| `steering_keys.py` | ONE definition of the steering-key family (mean/logreg/lda/probe-grad/-path/-class/random), shared by step6, step7 and `test_steering_collapse.py` |
+| `steering_keys.py` | ONE definition of the steering-key family (mean/logreg/lda/probe-grad/-path/-class/random) shared by step6, step7 and `test_steering_collapse.py`, **plus `SteerController`**, which arms the hook per generation and counts how many generations really ran steered |
+| `dry_model.py` | 28-layer, d=64 char-level toy LM that honours the real hook API, used only under `MESE_DRY=1` so step6/step7 can be wired-checked with no download |
 | `test_grouped_cv.py` | CPU self-test of the split logic and the memorization gap |
-| `test_steering_collapse.py` | CPU self-test of the §4 mechanism: the probe-gradient rowspace theorem, that `-path`/`-class` do NOT escape it, and the sham seed-collision trap |
+| `test_steering_collapse.py` | CPU self-test of the §4 mechanism (rowspace theorem; `-path`/`-class` do NOT escape it; contingency contrast), the sham seed-collision trap, and **section D: the dilution trap — the old loop steers 2 of 40, `SteerController` steers 40 of 40 and `check()` raises on a shortfall** |
 | `check_length_control.py` | CPU self-test (tokenizer only, no model): re-derives the length-only reading control at 10 seeds with its spread |
 | `step5_robust.py` | Observer results: random row, grouped row, template-identity control row, plus per-axis label-permutation + length-only controls |
-| `step6_steer_all.py` | Steerer results: measurability gate, 4 directions (incl. probe-grad), sham, fluency |
+| `step6_steer_all.py` | Steerer results: measurability gate, 7 directions (incl. probe-grad/-path/-class), sham, fluency, `[steering audit]` |
 | `step7_sweep.py` | Steering SEARCH: layer sweep x token-pooling (mean/last) x axis, same gate + sham; `MESE_SHAM=n` builds a sham distribution; per-cell label-permutation + length-only reading controls |
 | `analyze_step7.py` | CPU noise analysis of `results_step7.txt` (real-vs-sham stats, sign consistency, permutation p) |
 | `test_reading_controls.py` | CPU self-test of those reading controls (perm -> chance; length confound must be caught) |

@@ -80,7 +80,16 @@ for _ in range(800):
 probe.eval()
 
 def tone_of(text):
-    """Measure predicted valence (in [-1,1]) of a text via the probe (steer OFF)."""
+    """Measure predicted valence (in [-1,1]) of a text via the probe.
+
+    NOTE (protocol, corrected): the steering hook is NOT removed before this call,
+    and STEER_LAYER == OBS_LAYER == 14, so the steering pre-hook runs BEFORE this
+    capture pre-hook and this reads the STEERED activation. That is what this script
+    actually measures -- a dose-response of the steered representation (the classic
+    ActAdd read). It is NOT a steer-off read; step6/step7 changed the protocol to
+    disarm the hook before reading. Both are defensible, but they are not the same
+    measurement, and this one was previously mislabelled "steer OFF".
+    """
     ids = tok(text, return_tensors="pt").to(model.device)
     layer_means = {}
     def hook_fn(module, args):
@@ -133,7 +142,8 @@ SAMPLES = 3   # generations per scale per prompt
 
 print("=" * 74)
 print("STEERING CURVE  (axis: Valence, toward POSITIVE, layer 14)")
-print("Each tone = mean over prompt x sample generations (measured with steer OFF)")
+print("Each tone = mean over prompt x sample generations. READ = steered activation")
+print("(the hook stays armed during the read; see the note on tone_of below).")
 print("=" * 74)
 
 results = {s: [] for s in SCALES}

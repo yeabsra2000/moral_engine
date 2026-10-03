@@ -191,3 +191,92 @@ def print_cos_table(keys, ref="mean", indent="    "):
     for k, c in cos_table(keys, ref):
         print(f"{indent}  cos({k:>16}, {ref}) = {c:+.3f}")
 
+
+# ---- steering hook controller -------------------------------------------------
+# WHY THIS CLASS EXISTS -- the "dilution trap".
+# The natural way to write the steering loop is
+#     for scale in SCALES:
+#         attach_steer(vec, scale)        # arm ONCE per scale
+#         for p in PROMPTS:
+#             for _ in range(SAMPLES):
+#                 text = generate(p)      # steered for the FIRST sample only
+#                 attach_steer(vec, 0.0)  # disarm, so the tone read is honest
+# It arms once and disarms on the first sample, so only 1 in len(PROMPTS)*SAMPLES
+# generations is actually steered. With 5 prompts x 4 samples that is 1 in 20, so a
+# real effect of size e reads as about e/20 -- right at the sham noise floor. The
+# result is a "clean null" that is an artifact of the loop, with every control in
+# the world unable to detect it, because the bug dilutes the TREATMENT, not the
+# measurement. Measured offline by counting live-hook state: 2 of the 40
+# generations that should have been steered were steered. See
+# test_steering_collapse.py::test_steering_hook_is_live_for_every_steered_generation.
+#
+# SteerController makes arming PER GENERATION structural: `generate` arms, calls the
+# generator, then disarms (so the caller still gets an honest steer-off read for
+# free), and counts both the generations that should have been steered and the ones
+# that were. `check()` turns a shortfall into a hard error instead of a silent null.
+
+class SteerController:
+    """Owns one steering hook; counts how many generations were really steered."""
+
+    def __init__(self, layers):
+        self.layers = layers        # indexable modules with register_forward_hook
+        self.handle = None
+        self.vec = None
+        self.scale = 0.0
+        self.layer = None
+        self.n_gen = 0              # generations attempted
+        self.n_should_steer = 0     # generations at scale != 0
+        self.n_steered = 0          # generations that ran with the hook live
+
+    def is_armed(self):
+        return self.handle is not None
+
+    def disarm(self):
+        if self.handle is not None:
+            self.handle.remove()
+            self.handle = None
+
+    def arm(self, vec, scale, layer):
+        """(Re)arm the hook. A falsy `scale` (0/None) means 'no steering at all'."""
+        self.disarm()
+        if not scale:
+            return
+        self.vec, self.scale, self.layer = vec, float(scale), layer
+
+        def _h(mod, inp, out):
+            # decoder layer returns (hidden_states, past_kv); weights may sit on cpu
+            if isinstance(out, tuple):
+                h, rest = out[0], out[1:]
+                return ((h + self.scale * self.vec.to(h.device)),) + rest
+            return out + self.scale * self.vec.to(out.device)
+
+        self.handle = self.layers[layer].register_forward_hook(_h)
+
+    def generate(self, prompt, vec, scale, layer, generate_fn):
+        """ARM -> generate -> DISARM. The caller cannot forget to re-arm.
+
+        The hook is already removed when this returns, so the returned text can be
+        measured with the steer OFF (an honest read) without the caller doing
+        anything -- which is exactly the step that used to break the loop.
+        """
+        self.arm(vec, scale, layer)
+        self.n_gen += 1
+        self.n_should_steer += int(bool(scale))
+        self.n_steered += int(self.is_armed())
+        try:
+            return generate_fn(prompt)
+        finally:
+            self.disarm()
+
+    def check(self):
+        """Raise if any generation that should have been steered was not."""
+        if self.n_steered != self.n_should_steer:
+            raise AssertionError(
+                f"STEERING UNDER-APPLIED: {self.n_steered} of "
+                f"{self.n_should_steer} generations that should have been steered "
+                f"were steered (of {self.n_gen} total). A real effect would be "
+                f"diluted by {self.n_steered / max(self.n_should_steer, 1):.3f}x and "
+                "would read as a null. This is the 'dilution trap' -- arm the hook "
+                "per GENERATION (see SteerController.generate).")
+        return self.n_steered, self.n_gen
+

@@ -51,7 +51,13 @@ not as evidence of tone reading. Grouped CV + control is the honest protocol.
 
 ## Step 4 — Steering (Steerer) dose-response curve
 Method: ActAdd-style activation steering of Valence toward positive at layer 14;
-tone measured by the Observer probe with steering switched OFF (honest measure).
+tone measured by the Observer probe. **Correction (2026-10-03):** this script does
+NOT read with the steer off — STEER_LAYER == OBS_LAYER == 14 and the steering
+pre-hook stays armed, so it runs before the capture pre-hook and the read is of the
+STEERED activation. So this table is a dose-response of the steered representation
+(the classic ActAdd read), not a steer-off read as the header used to say. Numbers
+unchanged; the label was wrong. (step6/step7 deliberately disarm before reading, so
+their numbers are NOT comparable to this table.)
 3 natural prompts x 3 samples per scale. Chance = 0.0 (neither pole).
 
 | Steering scale | Mean tone | std |
@@ -66,6 +72,22 @@ Findings (INITIAL):
 - => The full observe->steer->observe loop works end-to-end on Qwen-1.5B.
 
 ## Step 6 — Multi-axis steering (all 4 axes) — FINAL NULL on 884 sentences  ⚠️
+
+> ### ❌ INVALIDATED (2026-10-03) — the treatment was diluted ~20x. See M9.
+> The loop that produced the table below armed the steering hook ONCE per scale and
+> then disarmed it on the first sample ("clear steer to measure honestly"), so only
+> 1 of every (5 prompts x 4 samples) = 20 generations was actually steered. Measured
+> offline by counting live-hook state: **2 of the 40 should-be-steered generations
+> were steered** (`test_steering_collapse.py`, section D). A real effect of size e
+> therefore reads as ~e/20 — right at the sham noise floor — which is exactly what
+> the table shows. **These numbers are not evidence of a null, and the reading below
+> (written before M9) is not supported by them.** The fix (`SteerController` in
+> `steering_keys.py`) arms per generation and audits the count; this experiment must
+> be re-run on GPU before any steering claim is made.
+>
+> What is NOT affected: §4.0 / M8. The cosine-collapse mechanism is computed from
+> activations, labels and the probe — it involves no generation — so it stands.
+
 Method: measuring probe = template-grouped MLP per axis (the honest reader);
 4 direction estimators (mean-difference / logistic / Fisher-LDA / probe-GRAD —
 the validated measuring probe's own input gradient at the positive pole) + a SHAM
@@ -83,7 +105,10 @@ Steering slopes (tone@4.0 − tone@0.0), tone∈[−1,+1], 0 = neutral:
 | Care/Harm | 0.98    | −0.02| +0.02  | +0.10| −0.06      | +0.04        | −2.5    |
 | Fairness  | 0.66    | +0.03| −0.01  | −0.01| −0.02      | +0.06        | −2.5    |
 
-DEFINITIVE, and now a CLEAN null even under a supervised nonlinear key:
+⚠️ The interpretation below was written BEFORE M9 was found, and the numbers it
+cites cannot support it. It is kept only as the record of what was concluded from a
+diluted run; the reasoning about *mechanism* (the cos values) is still correct,
+because those come from §4.0/M8 and not from generation.
 - Every axis passes the reading gate (0.66–0.98) → the measuring probe is valid,
   so "steering failed" and "measurement is noise" are SEPARATED. Adding any steer
   direction (scale up to 4.0) does not move tone beyond a random vector.
@@ -119,7 +144,17 @@ DEFINITIVE, and now a CLEAN null even under a supervised nonlinear key:
 | Care/Harm | -0.10    | -0.08    | -0.08    | -2.3 to -2.6 (ok) |
 | Fairness  | -0.09    | +0.06    | -0.13    | -2.5 to -2.8 (ok) |
 
-## Step 7 — Steering SEARCH: layer sweep × token-pooling (the null GENERALIZES)  ✅
+## Step 7 — Steering SEARCH: layer sweep × token-pooling (the null GENERALIZES)  ⚠️
+
+> ### ❌ INVALIDATED (2026-10-03) — same dilution bug as Step 6. See M9.
+> `step7_sweep.py` had the identical arm-once-then-disarm loop, so the steered
+> fraction there was 1/(2 prompts x 1 sample) in QUICK and 1/(5x4) in a full run.
+> Both use `SteerController` now, and the audit printed at the end of each run states
+> how many generations actually ran with the hook live. Re-run on GPU before citing
+> any slope here. The READING half (probe accuracy, the length and label-permutation
+> controls) is unaffected — it involves no generation. So the positive secondary
+> result below, that last-token pooling reads better than mean pooling, still stands;
+> only the steering null does not.
 
 Script `step7_sweep.py`; log `results_step7.txt`; analyser `analyze_step7.py`.
 Grid = layers {14, 20, 26} × pooling {mean, last} × 4 axes = 24 cells. Per cell we
@@ -447,12 +482,16 @@ Raw per-run values, `python check_length_control.py`.
    −0.31 @ L26). BUT reading improves with last-token pooling (grouped probe
    0.75–1.00 vs 0.63–0.99 mean). See the Step-7 section.
 
-## M8 — The steering-collapse mechanism (why the null is structural, not accidental)  ✅ NEW
+## M8 — The steering-collapse mechanism (a proved bound on the method family)  ✅ NEW
 
 Added 2026-10-02. This is the paper's spine: §4.0 of `paper.md`. It is **GPU-free** —
 the identity is proved for the probe architecture and verified on CPU by
 `test_steering_collapse.py`, and the cosine table is pure vector math on activations
-the grid already captured.
+the grid already captured. **Status after M9: unchanged.** Nothing here involves
+generation, so the mechanism stands even though the steering null it was meant to
+explain was withdrawn one day later. (The heading originally read "why the null is
+structural, not accidental" — that causal reading is what M9 took away; what M8 proves
+is the bound, not the consequence.)
 
 **The identity.** For the measuring probe `f(x) = W₂·SiLU(W₁x + b₁) + b₂` (the exact
 architecture in steps 5/6/7),
@@ -515,19 +554,100 @@ reproduces that direction **exactly** (`cos = +1.000`) — i.e. a "random" contr
 - key names widened to 16 chars in step6's summary so `probe-grad-class` does not
   break the table alignment.
 
-**What this means for the paper:** the RQ3 steering null is no longer an unexplained
-empirical failure. Every probe-derived key is confined to the subspace a probe never
-needed in order to *read* — which is precisely the gap between a readout and a
-direction for control. The remaining open question is **scale** (see the TODO below),
-and it is now a sharp test rather than a fishing trip.
+**What this means for the paper:** every probe-derived key is confined to the subspace
+a probe never needed in order to *read* — which is precisely the gap between a readout
+and a direction for control. That bound is the contribution, and it is proved rather
+than observed. What it does **not** yet do is explain an observed null: M9 (below)
+showed the null was produced by a loop that applied its treatment to 1 generation in
+20, so the causal link between this bound and the steering result is untested until the
+re-run. The scale question remains open too (see the TODO below), and is now a sharp
+test rather than a fishing trip — but only after the re-run.
+
+## M9 — The dilution trap: the steer was only applied to 1 in 20 generations  ❌✅
+Found 2026-10-03 while wiring the `MESE_DRY` mode (`dry_model.py`), and it invalidates
+the Step 6 / Step 7 steering nulls. Offline, CPU, no model:
+`test_steering_collapse.py` section D.
+
+**The bug.** The steering loop in `step6_steer_all.py` and `step7_sweep.py` was:
+
+    for scale in SCALES:
+        attach_steer(delta, scale)      # arm ONCE per scale
+        for p in PROMPTS:
+            for _ in range(SAMPLES):
+                t = generate(p)         # <- steered ONLY on the first sample
+                attach_steer(delta, 0.0)  # disarm, so the tone read is honest
+                ...
+
+`attach_steer(..., 0.0)` removes the hook and nothing re-arms it, so from the second
+sample onward every generation was unsteered. With 5 prompts x 4 samples, **19 of
+every 20 generations in the "steered" arm were actually steered at scale 0.**
+Measured by counting live-hook state: **2 of the 40** generations that should have
+been steered were steered, i.e. a **0.050x** dilution.
+
+**Why it is invisible in the results.** It dilutes the TREATMENT, not the
+measurement, so every control the study added still behaves correctly:
+
+| Control | Does it catch this? |
+|---|---|
+| measuring-probe gate (grouped acc ≥ 0.60) | no — the readout is valid |
+| SHAM random direction | no — the sham is diluted identically, so both look ~0 |
+| permutation test on the grid (p=0.438) | no — real and sham stay indistinguishable |
+| fluency check | no — fluency is fine, nothing was damaged |
+| full cosine table (§4.0) | no — computed from activations, not generation |
+
+The only thing that catches it is asking *"did the treatment actually get applied?"*
+— a question none of those controls asks. A measured slope of `e/20` is
+indistinguishable from a noise floor of ±0.05, so **a real effect up to ~20x the
+noise floor would have been reported as a clean null.** The published numbers
+(±0.02–0.10, sham ±0.04–0.06) are exactly consistent with that.
+
+**The fix.** `SteerController` in `steering_keys.py` makes arming *per generation*
+structural — `generate(prompt, vec, scale, layer, generate_fn)` arms, generates and
+disarms (so the caller still gets the honest steer-off read for free) — and counts
+`n_gen`, `n_should_steer`, `n_steered`. `check()` raises if any generation that
+should have been steered was not. step6 and step7 now end with a printed
+`[steering audit]` line. In `MESE_DRY` runs both report **100%** application:
+step6 `72/72`, step7 `4/4` of the should-be-steered generations.
+
+**Also fixed while here (same loop):** empty generations were being scored. A
+generation that returns no text gave `tok("")` → a 1-token sequence → `fluency`
+= `mean()` of an empty tensor = **nan** (seen as `fluency=nan` on the Care/Harm row),
+and `tone` of a fallback 1-token vector is meaningless. Empty generations are now
+skipped and counted, and `fluency` returns nan explicitly rather than a bogus value.
+
+**Status of the claims after M9:**
+
+| Claim | Status |
+|---|---|
+| §4.0 mechanism: probe keys lie in rowspace(W₁) | ✅ STANDS (no generation involved) |
+| M8: those keys collapse onto `mean` on real activations | ✅ STANDS (no generation involved) |
+| Observer / reading results (probe accuracy, controls) | ✅ STANDS (no generation involved) |
+| last-token reads better than mean pooling | ✅ STANDS (no generation involved) |
+| Step 6/7 steering NULL | ❌ INVALIDATED — must be re-run on GPU |
+| "the null is structural" | 🟡 the *mechanism* is proven; that it *causes* the null is now untested |
+
+The honest one-line summary: the mechanism is established, but the empirical null it
+was supposed to explain has to be re-measured, because the experiment that produced
+it never applied its own treatment.
+
 ## TODO (before the final table in the paper)
+- 🔴 **BLOCKING — RE-RUN THE STEERER (M9).** The Step 6 and Step 7 steering numbers
+  were produced by a loop that steered only 1 generation in 20, so they are not
+  evidence of anything. `SteerController` now arms per generation and prints a
+  `[steering audit]` line that must read 100%:
+  ```
+  python step6_steer_all.py     # expect "[steering audit] N/N ... "
+  MESE_SHAM=20 python step7_sweep.py
+  ```
+  Only after that can any statement be made about whether the probe-derived keys
+  steer. The mechanism (§4.0/M8) does NOT need this re-run.
+- ✅ DONE (was the old null, now INVALIDATED): probe-grad direction tested in step6;
+  layer sweep + last-token search (step7). The *scripts* work and the reading half of
+  step7 is valid, but their steering slopes must be discarded until re-run.
 - ✅ DONE: full Observer grid captured (REPS=10, layers 12/14/16) — `results_step5 (1).txt`.
-- ✅ DONE: probe-grad direction tested in step6 — also null (stronger null).
-- ✅ DONE: layer sweep + last-token search (step7) — null generalizes; log
-  `results_step7.txt`, noise analysis `analyze_step7.py`.
-- 🟡 RUN NEXT (optional, closes the flags): re-check the flagged cells with a sham
+- 🟡 RUN WITH THE RE-RUN (closes the flags): re-check the flagged cells with a sham
   DISTRIBUTION, e.g. `MESE_LAYERS=14,26 MESE_POOL=last MESE_SHAM=20 python step7_sweep.py`
-  (per-cell z-score > 3). Evidence so far says they are noise, so this is confirmation.
+  (per-cell z-score > 3).
 - 🟡 RUN NEXT (closes the last-token reading caveat): re-run the FULL `step7_sweep.py`
   (`python step7_sweep.py`) so its new per-cell length-only + label-permutation controls
   run on the model. Until then the last-token > mean reading advantage stays
