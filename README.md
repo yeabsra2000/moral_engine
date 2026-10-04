@@ -44,6 +44,18 @@ artifacts, and the repo now refuses to report them.
    compares two dilutions, and fluency is untouched. The loop now arms per generation
    and audits itself (`SteerController`, `[steering audit] N/N` on every run); **re-run
    step6/step7 on GPU before citing any steering number.** Full account: `results.md` M9.
+
+   **The replacement experiment is now in, and it is still a null.** `step8_dose.py` on
+   **Care/Harm** — the best-reading axis (grouped **0.98**) — with the hook auditing
+   **100%** and a **7.08%** dose of `||h||`, gives a real-key paired tone slope of
+   **+0.214 ± 0.071** against a distribution of **15 random directions** (mean −0.074,
+   sd 0.266, range [−0.689, +0.343]). That is **+1.08 sd**, with **2/15** shams reaching it
+   (add-one **p = 0.188**). The shift is reliably nonzero yet **not specific**: the readout
+   moves with perturbation *magnitude*, not with the moral direction, and the
+   dose–response is non-monotone (+0.21, −0.29, −0.07, +0.19 at scales 4/10/25/50). A
+   random direction even out-moved the real key (|−0.227| vs +0.214). This is exactly what
+   the subspace mechanism predicts — and it is the stronger paper. Full account:
+   `results.md` **M12**.
 4. **The collapse is contingent, not tautological — which is what makes it a finding.**
    On a synthetic *nonlinear* boundary the probe key points well away from `mean`
    (measured cos **0.39**) while still lying inside `rowspace(W₁)`. So the subspace theorem

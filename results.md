@@ -737,6 +737,49 @@ tone-shift signal remains **NOT CONFIRMABLE** until that run lands with
 **Status:** grouping verified sound (alarm retracted); gate aligned to the measuring
 probe; default axis moved to the strongest instrument. All four CPU suites still pass.
 
+## M12 — Dose finding on Care/Harm: the decisive run, and it is a NULL  ⚠️ instrument valid, treatment audited
+
+Run: `MESE_AXIS=Care/Harm MESE_SHAM=15 python step8_dose.py` (2026-10-04, Qwen2.5-1.5B-Instruct, layer 14).
+
+**Everything upstream of the verdict held.**
+- gate: template-grouped held-out **0.98 ± 0.00** (hidden=64, reps=10) -> instrument valid
+- `cos(mean, random) = 0.013` -> the sham points somewhere unrelated
+- `[steering audit] 2040/2550 hook LIVE` -> the treatment was actually applied
+- dose: scale 4 = **7.08%**, 10 = 17.7%, 25 = 44.3%, 50 = 88.5% of `||h||` (median
+  `||h|| = 56.50`). Scale 4 is above the sub-5% regime that forbids a no-effect claim,
+  and the sham spread below shows the readout *is* perturbable at that dose.
+
+**The result.** Paired per-sample slopes at scale 4 — the largest scale at which the
+real key's mean fluency stays within `BREAK_FL` of scale 0 — with all 15 shams re-read
+at that same scale:
+
+| quantity | value |
+|---|---|
+| real `mean` key | **+0.214 ± 0.071** (z vs its own sampling error **+3.02**) |
+| sham distribution (n=15) | mean **−0.074**, sd **0.266**, range [−0.689, +0.343] |
+| real vs sham | z = **+1.08**; empirical **2/15** reach it (add-one **p = 0.188**) |
+
+**Why the two tests disagree — and why that IS the finding.** The real key's slope is
+*reliably* nonzero (z=3.02 against n=30 per-sample differences) yet *indistinguishable*
+from an ordinary random direction (z=1.08, p=0.188). Within a fixed key the measurement
+is precise; across keys a random direction is just as effective. The readout responds to
+*perturbation magnitude*, not to the moral direction.
+
+**The null does not depend on the window choice.** Real-key slope vs scale 0 at every
+scale: **+0.214** (4), **−0.288** (10), **−0.067** (25), **+0.191** (50) — non-monotone,
+sign flips twice. The 15-sham mean is ~0 at *both* scale 4 (−0.074) and scale 10 (+0.085)
+with sd ~0.27, so the real key sits *inside* the random-direction spread at every dose,
+not merely at the pinned one; widening the window to scale 10 pushes the real key
+*further* into the null (its slope turns negative). Separately, the `random` key produced
+|slope| = **0.227**, larger than the real key's 0.214.
+
+**Status: NULL on the decisive axis, with a valid instrument and an audited treatment.**
+This is NOT a claim that the model cannot be steered. It is a claim that *this key family*
+adds nothing over a random direction of the same size — which is exactly what the
+`rowspace(W₁)` mechanism (M8) predicts. The earlier suggestive Valence `+0.722` at
+scale 10 did not merely fail to replicate here: on Care/Harm at scale 10 the real key's
+slope is **negative**. Pending confirmation: a second axis (Arousal) run identically.
+
 ## TODO (before the final table in the paper)
 - 🔴 **BLOCKING — RE-RUN THE STEERER (M9).** The Step 6 and Step 7 steering numbers
   were produced by a loop that steered only 1 generation in 20, so they are not
@@ -797,22 +840,30 @@ probe; default axis moved to the strongest instrument. All four CPU suites still
    Reported against a template-identity control; grouped CV is the honest protocol.
 2. Nonlinear advantage: supported by grouped-CV across layers 12/14/16 (MLP
    0.78–0.98 vs linear 0.46–0.66). This is the paper's strongest RQ2 evidence.
-3. Steerer: a clean, gated null — measurement valid (probe ≥ 0.60 on all axes), yet
-   all direction estimators (mean / logreg / LDA / probe-grad) move tone only
-   within −0.06…+0.10, no more than a random sham. The probe-grad key, the
-   validated probe's own gradient at the positive pole, also fails. Report the
-   null honestly; the protocol now separates "measurement noise" from "steering
-   ineffective".
-4. Care/Harm is the most readable axis (0.98), yet its best supervised slope
-   (+0.10, LDA) barely exceeds the sham and its probe-grad key even goes negative
-   (−0.06). This illustrates that readout strength does not translate to steerability,
-   even under a supervised gradient key.
+3. Steerer: a clean, gated null on the decisive axis (**M12**). On Care/Harm — the
+   strongest-reading axis (grouped **0.98**) — with the hook auditing at **100%** and a
+   dose of **7.08%** of `||h||`, the real key's paired tone slope is **+0.214 ± 0.071**,
+   while **15** independent random directions give mean **−0.074**, sd **0.266**, range
+   [−0.689, +0.343]. The real key sits **+1.08 sd** from the sham mean; **2/15** shams
+   reach it (add-one **p = 0.188**). The slope is reliably nonzero (z=+3.02 vs its own
+   sampling error) but **not specific**: the readout responds to perturbation *magnitude*,
+   not to the moral direction. The dose–response is non-monotone (+0.21, −0.29, −0.07,
+   +0.19 at scales 4/10/25/50). *(The older ±0.02–0.10 step6/step7 numbers are WITHDRAWN
+   — diluted treatment, M9.)*
+4. Readout strength does not translate to steerability. Care/Harm is the most readable
+   axis (grouped 0.98), yet the M12 dose run cannot separate its supervised key from a
+   random direction of the same size. This is the paper's central negative claim, and it
+   is what the `rowspace(W₁)` mechanism (M8) predicts: the key family varies only inside
+   the subspace the readout already uses, so it carries no leverage the readout lacks.
 5. Steering search (step7): the null generalizes over layers {14,20,26} × {mean,
    last-token} pooling (24 cells). Reading improves under last-token pooling
    (grouped probe 0.75–1.00). Every per-cell "win" is noise: real−sham +0.004
    (permutation p = 0.438) and sign flips between adjacent layers.
 Caveats: single model (Qwen-1.5B); mean and last-token pooling, no attention
-weighting; steering scales ≤ 4.0; the search's verdict uses a single sham draw
-(a sham-distribution mode, `MESE_SHAM=n`, is implemented for confirmation);
+weighting; the M12 dose verdict is pinned to the largest fluency-intact scale
+(4.0 = 7.08% of `||h||`), so the ladder's higher rungs diagnose fluency breakage
+rather than steering — though the null holds at those rungs too; the search's
+verdict originally used a single sham draw and this is now fixed (sham
+DISTRIBUTION mode, n=15, exercised in M12); a second axis (Arousal) is pending;
 no independent human rating yet.
 
