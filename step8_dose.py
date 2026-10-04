@@ -261,49 +261,58 @@ except Exception as _e:
     print(f"[warn] GROUPS unavailable ({_e}) -> held-out accuracy not computed.")
 
 
-def grouped_heldout_acc(Xf, yf, grp, hidden=32, k=5, epochs=500):
-    """Template-grouped held-out accuracy, inline (no cross-script import).
+def grouping_is_informative(grp, yv):
+    """Does the group key actually support a grouped split on THIS axis?
 
-    Deliberately NOT `from step6_steer_all import probe_cv_acc`: importing that module
-    EXECUTES the entire steering experiment (it is a script, not a library), so the
-    import would re-run everything. Duplicating ~15 lines is the lesser evil, and
-    this function is the definition of the honest instrument quality anyway.
+    Two ways it can fail, both found the hard way in step8:
+      1. TOO FEW groups -- fewer than k, so most folds come out empty and
+         "held-out accuracy" is really a 1-2 fold average.
+      2. MIRRORED templates -- one group id spans BOTH polarities (the easy set
+         uses the literal id 'easy' for every row, and hard templates appear once
+         per polarity). A group must go wholly into one fold to prevent leakage,
+         but a stratified fold needs each fold to be single-class. These two
+         requirements are contradictory, so grouped CV degenerates.
+
+    Returns (ok, reason, n_groups).
     """
-    uniq = sorted(set(grp))
-    fold_of = {g: i % k for i, g in enumerate(uniq)}
-    accs = []
-    for f in range(k):
-        te = [i for i in range(len(yf)) if fold_of[grp[i]] == f]
-        tr = [i for i in range(len(yf)) if fold_of[grp[i]] != f]
-        if not te or not tr:
-            continue
-        n = torch.nn.Sequential(torch.nn.Linear(Xf.size(1), hidden), torch.nn.SiLU(),
-                                torch.nn.Linear(hidden, 1)).to(Xf.device)
-        opt = torch.optim.Adam(n.parameters(), lr=1e-3, weight_decay=1e-4)
-        ytr = (yf[tr] > 0).float().to(Xf.device)
-        for _ in range(epochs):
-            opt.zero_grad()
-            torch.nn.functional.binary_cross_entropy_with_logits(
-                n(Xf[tr]).view(-1), ytr).backward()
-            opt.step()
-        with torch.no_grad():
-            pred = (torch.sigmoid(n(Xf[te]).view(-1)) > 0.5).long().cpu()
-        accs.append((pred == (yf[te] > 0).long().cpu()).float().mean().item())
-    return statistics.fmean(accs) if accs else None
+    uniq = set(grp)
+    if len(uniq) < 5:
+        return False, f"only {len(uniq)} distinct group(s) for 5 folds", len(uniq)
+    lab = {}
+    for gg, yy in zip(grp, yv.tolist()):
+        lab.setdefault(gg, set()).add(yy)
+    mixed = sum(1 for v in lab.values() if len(v) > 1)
+    if mixed == len(lab):
+        return False, (f"all {len(lab)} group ids span BOTH polarities (mirrored "
+                       f"templates) -> grouped folds cannot be class-stratified"), len(lab)
+    return True, f"{len(uniq)} groups, {mixed} mirrored", len(uniq)
 
 
 if _groups and not DRY:
-    _cv = grouped_heldout_acc(Xa, y.cpu(), _groups)
-    print(f"probe HELD-OUT (template-grouped) accuracy = {_cv:.2f}   "
-          f"<-- the honest instrument quality; gate {MIN_PROBE_ACC}")
-    print("       (in-sample accuracy below is optimistic: `net` was fit on exactly")
-    print("        this data. The gap between the two IS the overfitting.)")
-    _gate = _cv
+    _ok, _why, _ng = grouping_is_informative(_groups, y.cpu())
+    print(f"[grouping] {_why}")
+    if _ok:
+        # Canonical CV from probe_cv.py -- an importable library with no side
+        # effects, so importing it is safe (unlike step6_steer_all.py, which
+        # executes the whole experiment on import). Do NOT reimplement the folds
+        # here: a local copy already silently produced 3-of-5 empty folds.
+        import probe_cv as _pc
+        _m, _se2 = _pc.cv_report(Xa, y.cpu(), hidden=32, reps=3, groups=_groups)
+        _cv = _m
+        print(f"probe HELD-OUT (template-grouped) accuracy = {_m:.2f} +/- {_se2/2:.2f}  "
+              f"<-- honest instrument quality; gate {MIN_PROBE_ACC}")
+        print("       (in-sample below is optimistic: `net` was fit on exactly this data.)")
+        _gate = _cv
+    else:
+        _cv = None
+        print("[grouping] grouped CV is NOT meaningful here -> in-sample only.")
+        print(f"           {MIN_PROBE_ACC}-style held-out numbers cannot be trusted for")
+        print("           this axis. step8 CANNOT honestly certify the instrument,")
+        print("           so any tone shift it reports is exploratory only. Fix the")
+        print("           group key (give each mirrored template a per-polarity id)")
+        print("           before treating a dose effect as confirmable.")
+        _gate = acc
 elif DRY:
-    # The stub's activations carry no template structure, so the honest gate always
-    # fails there and would abort before the steering code ever runs -- making the
-    # wiring check test nothing. A DRY run therefore reports in-sample only and says
-    # so loudly; its numbers remain meaningless.
     _gate = acc
     print("[DRY RUN] skipping the grouped held-out gate: the stub has no template")
     print("          structure, so it cannot be honestly evaluated. In-sample only.")
@@ -501,7 +510,19 @@ if N_SHAM > 1:
             print(f"  empirical: {n_ge}/{len(slopes)} sham directions reach it "
                   f"(add-one p = {p_emp:.3f})")
             _sig = min(abs(z) >= 2.0, p_emp < 0.05)
-            if not _sig:
+            # A z-test only means something if the instrument can actually measure
+            # the thing. With degenerate grouping the probe cannot be certified, so
+            # a "significant" tone shift may be template memorization inside the
+            # measuring probe. Never let a statistical verdict stand alone.
+            if _cv is None:
+                print("\n  VERDICT: NOT CONFIRMABLE.")
+                print("           The shift is statistically suggestive, but the measuring")
+                print("           instrument could NOT be validated (degenerate template")
+                print("           grouping -> no honest held-out accuracy exists). Tone here")
+                print("           may be template memorization rather than a real change.")
+                print("           Fix dataset grouping before this means anything.")
+                _sig = False
+            elif not _sig:
                 print("\n  VERDICT: NOT SEPARABLE from random directions.")
                 print("           The two tests disagree or are both marginal, so this")
                 print("           is a PRELIMINARY candidate effect at best. Treat as")
