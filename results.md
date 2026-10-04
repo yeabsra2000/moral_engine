@@ -677,6 +677,66 @@ all green.
 
 **Status:** fixed, guarded, and it cost one GPU run rather than a whole paper.
 
+## M11 — Instrument-gate protocol mismatch, and a RETRACTED dataset alarm  ✅ FIXED / ❌ RETRACTED
+
+Two separate things, both surfaced while investigating why the step8 dose run kept
+aborting on Valence.
+
+**1. ❌ RETRACTED — the dataset was NOT broken.** An earlier revision of this
+investigation reported that the Valence group key was degenerate: *"the easy set uses
+the literal id `'easy'` for every row"*, 2 distinct group ids, folds
+`[140, 36, 0, 0, 0]`. **All of that was wrong.** It was produced by reading the
+**docstring of `grouping_is_informative`** — which describes a failure mode the guard
+is *built to catch* — as if it were a measurement of the shipped data.
+
+Measured directly against `dataset.py`:
+
+| check | result |
+|---|---|
+| distinct ids in `GROUPS` | **146** |
+| literal `'easy'` entries | **0** |
+| per-axis groups | Valence **32**, Arousal 28, Care/Harm 58, Fairness 28 |
+| no-signal control through the real grouping | **0.502**, **no empty folds** |
+
+Grouping is sound on every axis and needs no fix. The docstring has been rewritten so
+it can no longer be misread as a data claim, and the guard is kept as a tripwire
+against a future dataset edit.
+
+**2. ✅ FIXED — the gate certified a different probe than the one that measures.**
+step8 aborted Valence with `held-out accuracy = 0.59 < gate 0.60`. That number came
+from `probe_cv.cv_report(hidden=32, reps=3)` while the measuring instrument —
+`make_probe`, and the MLP step5 actually reports — uses **hidden=64**. With reps=3 the
+mean sits inside its own noise band.
+
+The instrument quality per axis (step5, template-grouped, 10×5-fold) is:
+
+| axis | grouped MLP | ± 2SE | clears 0.60? |
+|---|---|---|---|
+| Valence | 0.84 | ± 0.17 | barely — band spans it |
+| Arousal | 0.72 | ± 0.15 | yes |
+| **Care/Harm** | **0.98** | **± 0.00** | **comfortably** |
+| Fairness | 0.79 | ± 0.03 | yes |
+
+So the 0.59 was a **low draw from Valence's wide ±0.17 band**, amplified by a weaker
+probe — not a broken dataset, and not evidence about steering. The gate now runs
+`GATE_HIDDEN=64, GATE_REPS=10`, i.e. the **same protocol step5 reports**, so it can no
+longer certify an instrument the experiment does not use.
+
+**3. A second difference, deliberately KEPT.** step8 captures the residual stream
+**leaving** layer 14 (`register_forward_hook`) — the same tap `step6`/`step7` steer
+through. `step5_robust.py` uses `register_forward_pre_hook`, i.e. the stream *entering*
+the layer, so its "layer 14" is **one hop shallower**. That is intentional (the gate must
+certify the stream steering actually writes to) and is now documented at the capture
+site, so a step5-vs-step8 accuracy gap is not misread as the instrument changing quality.
+
+**Consequence for the steering claim.** Care/Harm is the only axis whose instrument is
+comfortably clear of the gate, so `step8_dose.py` now **defaults to Care/Harm**. The
+tone-shift signal remains **NOT CONFIRMABLE** until that run lands with
+`MESE_SHAM=15` plus a second axis.
+
+**Status:** grouping verified sound (alarm retracted); gate aligned to the measuring
+probe; default axis moved to the strongest instrument. All four CPU suites still pass.
+
 ## TODO (before the final table in the paper)
 - 🔴 **BLOCKING — RE-RUN THE STEERER (M9).** The Step 6 and Step 7 steering numbers
   were produced by a loop that steered only 1 generation in 20, so they are not

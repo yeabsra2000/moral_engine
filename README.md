@@ -112,7 +112,7 @@ Setup: `Runtime → Change runtime type → T4 GPU`, then run these cells:
 
 # 3) upload these files into /content (drag & drop, or the folder icon):
 #    dataset.py  probe_cv.py  steering_keys.py  step5_robust.py  step6_steer_all.py
-#    step7_sweep.py  analyze_step7.py
+#    step7_sweep.py  analyze_step7.py  step8_dose.py
 #    check_length_control.py  test_*.py  (CPU-only, no model needed)
 #    steering_keys.py is REQUIRED by step6/step7 -- omitting it stops the run
 #    immediately with "MISSING FILE(S): steering_keys.py".
@@ -174,14 +174,31 @@ Setup: `Runtime → Change runtime type → T4 GPU`, then run these cells:
 #     noise stats of a finished step7 log (CPU only, no GPU needed):
 # python analyze_step7.py
 
+# 7c) DOSE run — was the Step 6 null real, or just under-scaled? THIS is the
+#     decisive steering experiment (~15 min at MESE_SHAM=6, ~60-75 min at 15).
+#     It DEFAULTS to Care/Harm: the strongest-reading axis (template-grouped
+#     0.98 +- 0.00) and the only one whose instrument sits comfortably clear of
+#     the 0.60 gate. Valence reads 0.84 +- 0.17 — wide enough that a short run
+#     there can land under the gate and abort for instrument reasons, not
+#     steering reasons. Bisect fluency first; only then trust the verdict.
+!MESE_SHAM=6 python step8_dose.py                       # smoke (~15 min)
+!MESE_AXIS=Care/Harm MESE_SHAM=15 python step8_dose.py  # confirmatory run
+#     The script REFUSES to run unless the measuring probe clears a
+#     template-grouped held-out gate at the SAME protocol step5 reports
+#     (hidden=64, reps=10), so no verdict can rest on a weak instrument.
+#     A second axis, run identically, is the cheapest confirmation:
+# !MESE_AXIS=Arousal MESE_SHAM=15 python step8_dose.py
+#     Rename the log between axes so the runs do not merge (it APPENDS):
+# !mv results_step8_dose.txt results_step8_care_n15.txt
+
 # 8) nothing is lost if the session drops: the runs append to these logs
-!ls -la results_step5.txt results_step6.txt results_step7.txt
+!ls -la results_step5.txt results_step6.txt results_step7.txt results_step8_dose.txt
 !cat results_step7.txt | tail -40
 
 # 9) download the logs to paste back into the chat
 from google.colab import files
 files.download('results_step5.txt'); files.download('results_step6.txt')
-files.download('results_step7.txt')
+files.download('results_step7.txt'); files.download('results_step8_dose.txt')
 ```
 
 Optional older steps: `pilot.py`, `step2_probe.py`, `step3_rigorous.py`, `step4_steer.py`.
@@ -241,6 +258,7 @@ python dataset_merge.py --review dataset_review.csv   # merge only un-flagged ro
 | `step6_steer_all.py` | Steerer results: measurability gate, 7 directions (incl. probe-grad/-path/-class), sham, fluency, `[steering audit]` |
 | `step7_sweep.py` | Steering SEARCH: layer sweep x token-pooling (mean/last) x axis, same gate + sham; `MESE_SHAM=n` builds a sham distribution; per-cell label-permutation + length-only reading controls |
 | `analyze_step7.py` | CPU noise analysis of `results_step7.txt` (real-vs-sham stats, sign consistency, permutation p) |
+| `step8_dose.py` | DOSE-FINDING: was the Step 6 null real, or just under-scaled? Per-scale tone + fluency on a WIDE ladder, a sham **distribution** (`MESE_SHAM`), paired per-sample slopes, and a template-grouped instrument gate at step5's protocol (hidden=64, reps=10). Defaults to Care/Harm |
 | `test_reading_controls.py` | CPU self-test of those reading controls (perm -> chance; length confound must be caught) |
 | `test_probe_calibration.py` | CPU calibration: catches vacuous low-capacity controls; what a linear probe can earn here |
 | `results.md` | results log incl. corrected findings |

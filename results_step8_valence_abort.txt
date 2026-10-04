@@ -1,0 +1,3 @@
+
+===== step8 dose run 2026-10-04 07:56:18 axis=Valence dry=False =====
+[log] writing to results_step8_dose.txt  |  axis=Valence scales=[0.0, 4.0, 10.0, 25.0, 50.0] directions=['mean', 'random'] samples=6 dry=False

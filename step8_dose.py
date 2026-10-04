@@ -22,15 +22,24 @@ not that the direction was causally inert.
 
 WHAT THIS RUNS
 --------------
-ONE axis (Valence), TWO directions (`mean` and the `random` sham), a WIDE scale
-ladder, and per-scale fluency. Fluency is the readout that tells us where the
-model breaks. The decision rule is at the bottom of the output.
+ONE axis per run (default Care/Harm -- see AXIS below), TWO directions (`mean`
+and the `random` sham), a WIDE scale ladder, and per-scale fluency. Fluency is
+the readout that tells us where the model breaks. The decision rule is at the
+bottom of the output.
 
 Everything is configurable so the same script can be re-run as a confirmation
 without editing code:
 
-    MESE_AXIS=Arousal  MESE_SCALES=0,10,50,100,200  python step8_dose.py
+    python step8_dose.py                           # default axis = Care/Harm
+    MESE_AXIS=Arousal MESE_SHAM=15 python step8_dose.py
+    MESE_SCALES=0,10,50,100,200 python step8_dose.py
     MESE_DRY=1 python step8_dose.py     # CPU wiring check, meaningless numbers
+
+The DEFAULT AXIS IS Care/Harm. The steering verdict must be read off the most
+reliable instrument, and Care/Harm is the only axis whose template-grouped
+held-out accuracy (~0.98) is comfortably clear of the 0.60 gate; Valence sits on
+the boundary (~0.6-0.8 depending on probe protocol), so a run there can abort or
+pass on instrument noise rather than on any steering effect.
 """
 import os, sys, statistics, datetime, random, time
 import torch
@@ -66,7 +75,13 @@ DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 DTYPE = torch.bfloat16 if DEVICE == "cuda" else torch.float32
 MODEL_ID = os.environ.get("MESE_MODEL", "Qwen/Qwen2.5-1.5B-Instruct")
 LAYER = int(os.environ.get("MESE_LAYER", "14"))
-AXIS = os.environ.get("MESE_AXIS", "Valence")
+# DEFAULT IS Care/Harm, NOT Valence. Valence is the WEAKEST instrument on this
+# dataset: its template-grouped held-out accuracy sits right on the 0.60 gate,
+# so the run can abort (or squeak through) on instrument quality rather than on
+# the steering question. Care/Harm is the strongest (grouped ~0.98, stable at
+# layers 12/14/16) and has the most data (436 rows / 58 template groups), so a
+# verdict there is decided by the treatment, not by the measuring device.
+AXIS = os.environ.get("MESE_AXIS", "Care/Harm")
 # Wide ladder on purpose: the point is to find where fluency BREAKS. A ladder that
 # stops at 4.0 cannot distinguish "no effect" from "no dose".
 SCALES = [float(s) for s in os.environ.get(
@@ -82,6 +97,17 @@ PROMPTS = [
 SAMPLES = int(os.environ.get("MESE_SAMPLES", "6"))
 GEN_LEN = 18
 MIN_PROBE_ACC = 0.60
+# GATE PROTOCOL. The gate below must certify the SAME probe that then measures
+# tone, or it certifies a different instrument than the experiment uses.
+# History: this gate once ran hidden=32/reps=3 while `make_probe` (the measuring
+# device) used hidden=64, and reps=3 leaves the mean within its own noise band --
+# so a run could abort (or pass) on a probe that was never the instrument.
+#   hidden=64 -> matches make_probe and step5_robust.py's reported MLP.
+#   reps=10   -> matches step5_robust.py, so this number is directly comparable
+#                to the reading accuracies quoted in the paper.
+# Both are overridable, but there is rarely a reason to.
+GATE_HIDDEN = int(os.environ.get("MESE_GATE_HIDDEN", "64"))
+GATE_REPS = int(os.environ.get("MESE_GATE_REPS", "10"))
 # Fluency drop from the scale-0 baseline that we call "the model is broken".
 BREAK_FL = 0.20
 
@@ -215,6 +241,14 @@ def embed_all():
         # `.float()` here for the same reason as capture_vec: bfloat16 activations
         # cannot meet the float32 probe. Also L2-normalised per row, matching step6,
         # so the steering keys are computed from the SAME features step6 measured.
+        #
+        # CAPTURE POINT (do not "align" this casually): this is a FORWARD hook, so
+        # it reads the residual stream LEAVING layer LAYER -- the same tap step6/step7
+        # steer through. step5_robust.py uses a FORWARD_PRE hook, i.e. the stream
+        # ENTERING the layer, so its "layer 14" is one hop shallower than ours. That
+        # is a deliberate difference, not a bug: the gate must certify the stream the
+        # steering actually writes to. Treat a step5-vs-step8 accuracy gap partly as
+        # this one-hop offset before concluding the instrument changed quality.
         acts.append(cap[0].float().mean(dim=1).squeeze(0))
         labs.append(list(y) if isinstance(y, (list, tuple)) else [y])
     X = torch.stack(acts)
@@ -264,14 +298,27 @@ except Exception as _e:
 def grouping_is_informative(grp, yv):
     """Does the group key actually support a grouped split on THIS axis?
 
-    Two ways it can fail, both found the hard way in step8:
+    Guards the two ways a grouped split degenerates into a number that LOOKS like
+    held-out accuracy but is not:
       1. TOO FEW groups -- fewer than k, so most folds come out empty and
-         "held-out accuracy" is really a 1-2 fold average.
-      2. MIRRORED templates -- one group id spans BOTH polarities (the easy set
-         uses the literal id 'easy' for every row, and hard templates appear once
-         per polarity). A group must go wholly into one fold to prevent leakage,
-         but a stratified fold needs each fold to be single-class. These two
-         requirements are contradictory, so grouped CV degenerates.
+         "held-out accuracy" is really a 1-2 fold average (a local fold
+         reimplementation once produced 3-of-5 empty folds in exactly this way,
+         which is why the real folds now come from probe_cv.make_folds).
+      2. ALL groups mirrored -- if EVERY group id spans both polarities, a group
+         can neither go wholly into one fold nor leave each fold single-class, so
+         a class-stratified grouped split is impossible.
+
+    SCOPE -- what this guard is NOT. The literal-id 'easy' collapse is a failure
+    mode this guard is built to CATCH, not a property of the shipped data. Read
+    it as a hypothetical, never as a measurement (an earlier revision of this
+    investigation did exactly that and wrongly reported the dataset as broken).
+
+    Measured against dataset.py as of 2026-10: GROUPS holds 146 distinct template
+    ids and ZERO literal 'easy' entries; per axis the counts are Valence 32,
+    Arousal 28, Care/Harm 58, Fairness 28 -- all >= 5; and a no-signal control run
+    through this exact grouping returns ~0.50 with no empty folds. Grouping is
+    therefore sound on every axis, and this function returns ok=True throughout.
+    It stays as a tripwire so a future dataset edit cannot silently break the gate.
 
     Returns (ok, reason, n_groups).
     """
@@ -296,11 +343,17 @@ if _groups and not DRY:
         # effects, so importing it is safe (unlike step6_steer_all.py, which
         # executes the whole experiment on import). Do NOT reimplement the folds
         # here: a local copy already silently produced 3-of-5 empty folds.
+        # GATE_HIDDEN/GATE_REPS match `make_probe` and step5_robust.py, so this
+        # number is the SAME instrument that measures tone below (see config block).
         import probe_cv as _pc
-        _m, _se2 = _pc.cv_report(Xa, y.cpu(), hidden=32, reps=3, groups=_groups)
+        _m, _se2 = _pc.cv_report(Xa, y.cpu(), hidden=GATE_HIDDEN, reps=GATE_REPS,
+                                 groups=_groups)
         _cv = _m
-        print(f"probe HELD-OUT (template-grouped) accuracy = {_m:.2f} +/- {_se2/2:.2f}  "
+        print(f"probe HELD-OUT (template-grouped) accuracy = {_m:.2f} "
+              f"+/- {_se2:.2f} (2*SE)  "
               f"<-- honest instrument quality; gate {MIN_PROBE_ACC}")
+        print(f"       (gate protocol: hidden={GATE_HIDDEN}, reps={GATE_REPS}, "
+              f"same as the measuring probe)")
         print("       (in-sample below is optimistic: `net` was fit on exactly this data.)")
         _gate = _cv
     else:
@@ -322,8 +375,12 @@ else:
     print("        Gate uses in-sample, so treat any verdict as PRELIMINARY.")
 print(f"probe in-sample accuracy = {acc:.2f}")
 if _cv is not None:
-    print(f"probe HELD-OUT (template-grouped) accuracy = {_cv:.2f}   "
-          f"<-- the honest instrument quality; gate {MIN_PROBE_ACC}")
+    # When the grouped gate ran above, this value was already printed there WITH its
+    # 2*SE and its protocol; do not print a second, differently-formatted copy (it
+    # reads as two different numbers in a saved log). This is the one-line summary
+    # the decision block below actually gates on.
+    print(f"[gate] instrument = template-grouped held-out {_cv:.2f}  "
+          f"(gate {MIN_PROBE_ACC})")
     _gate = _cv
 else:
     _gate = acc
