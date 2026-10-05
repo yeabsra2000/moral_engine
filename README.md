@@ -106,6 +106,7 @@ python test_grouped_cv.py          # fold invariants + template-memorization con
 python test_probe_calibration.py   # catches vacuous controls; calibrates the linear probe
 python test_reading_controls.py    # length/permutation controls vs synthetic ground truth
 python test_steering_collapse.py   # §4 mechanism (rowspace) + the dilution/treatment audit
+python test_docs_match_transcripts.py  # docs quote the committed step8 transcripts (numbers)
 python check_length_control.py     # re-derives the length control (tokenizer only, no model)
 MESE_DRY=1 MESE_QUICK=1 python step5_robust.py   # end-to-end wiring check, no model (~5 min)
 MESE_DRY=1 python step6_steer_all.py             # steerer wiring check, no model
@@ -166,6 +167,8 @@ Setup: `Runtime → Change runtime type → T4 GPU`, then run these cells:
 !python test_grouped_cv.py
 !python test_probe_calibration.py
 !python test_reading_controls.py
+#     the doc<->transcript audit needs the committed transcripts (step 1 upload):
+!python test_docs_match_transcripts.py
 #     check_length_control.py re-derives the length-only reading control EXACTLY (10
 #     seeds + spread) and touches no model weights -- it downloads only the ~7 MB
 #     tokenizer, so it is a cheap way to verify a length claim off-GPU:
@@ -297,5 +300,6 @@ python dataset_merge.py --review dataset_review.csv   # merge only un-flagged ro
 | `step8_dose.py` | DOSE-FINDING: was the Step 6 null real, or just under-scaled? Per-scale tone + fluency on a WIDE ladder, a sham **distribution** (`MESE_SHAM`), paired per-sample slopes, and a template-grouped instrument gate at step5's protocol (hidden=64, reps=10). Defaults to Care/Harm |
 | `test_reading_controls.py` | CPU self-test of those reading controls (perm -> chance; length confound must be caught) |
 | `test_probe_calibration.py` | CPU calibration: catches vacuous low-capacity controls; what a linear probe can earn here |
+| `test_docs_match_transcripts.py` | CPU doc↔transcript audit (126 checks): re-derives both step8 transcripts' DECISION blocks from raw per-scale rows; every headline number quoted in README/paper/results must match the parsed values; stale-claim phrases retired in M13e asserted absent |
 | `results.md` | results log incl. corrected findings |
 | `paper.md` | draft paper |

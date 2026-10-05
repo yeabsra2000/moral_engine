@@ -884,6 +884,13 @@ verdict itself demands before quoting. Three caveats keep it honest:
    +1.32 vs the real key's +1.40), though its pinned-scale slope (+0.550) stays well
    below +0.831; the best sham overall is +0.697 — within 0.5 sham-sd of the real key.
 
+**Guarded offline** (`test_docs_match_transcripts.py`, CPU, no model, 126 checks): both
+transcripts' DECISION blocks are re-derived from the raw per-scale rows, every headline
+value quoted in README/paper/results is checked against the parsed transcript values,
+and the stale-claim phrases retired in M13e are asserted absent. A stale number in a
+doc is now a test failure, not a reviewer catch — the documentation side of the
+"reads as protective but is inert" class, closed by machine.
+
 ### Consequence for the paper
 The steerer result is now **axis-dependent, not a blanket null**: Care/Harm — the
 strongest-reading axis — does **not** separate (M12: z=+1.08, 2/15), while Arousal

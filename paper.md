@@ -698,7 +698,12 @@ universal.
   `mean` does not, that path- and class-averaging do not escape the point key
   (cos 0.995–1.000), that on a *nonlinear* boundary the probe key points away from
   `mean` (cos 0.39), and that a sham generator seeded with the caller's own seed
-  reproduces the ground-truth direction exactly. `probe_cv.py` holds the shared,
+  reproduces the ground-truth direction exactly. `python test_docs_match_transcripts.py`
+  (126 checks) re-derives both step8 transcripts' DECISION blocks from their raw
+  per-scale rows and asserts that every headline value quoted in this paper, README and
+  results.md matches the parsed transcript, with the stale phrases retired during audit
+  asserted absent — documentation drift fails a test instead of surfacing as a reviewer
+  comment. `probe_cv.py` holds the shared,
   model-free CV logic and `steering_keys.py` the shared key estimators *and* the
   `SteerController` hook. Section D of `test_steering_collapse.py` also reproduces the
   dilution bug on a fake layer (2 of 40 generations steered) and asserts that
