@@ -43,7 +43,7 @@ artifacts, and the repo now refuses to report them.
    gate tests the readout, the sham is diluted by the same factor, the permutation test
    compares two dilutions, and fluency is untouched. The loop now arms per generation
    and audits itself (`SteerController`, `[steering audit] N/N` on every run); **re-run
-   step6/step7 on GPU before citing any steering number.** Full account: `results.md` M9.
+   step6/step7 on GPU before citing any *step6/step7* steering number** — the audited `step8_dose.py` runs are citable as they stand. Full account: `results.md` M9.
 
    **The replacement experiment is in, and the verdict is axis-dependent.**
    `step8_dose.py` on **Care/Harm** — the best-reading axis (grouped **0.98**) — with the hook auditing

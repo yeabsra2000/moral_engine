@@ -557,11 +557,15 @@ reproduces that direction **exactly** (`cos = +1.000`) — i.e. a "random" contr
 **What this means for the paper:** every probe-derived key is confined to the subspace
 a probe never needed in order to *read* — which is precisely the gap between a readout
 and a direction for control. That bound is the contribution, and it is proved rather
-than observed. What it does **not** yet do is explain an observed null: M9 (below)
-showed the null was produced by a loop that applied its treatment to 1 generation in
-20, so the causal link between this bound and the steering result is untested until the
-re-run. The scale question remains open too (see the TODO below), and is now a sharp
-test rather than a fishing trip — but only after the re-run.
+than observed. M9 (below) showed the *original* steering null carried no information
+(loop applied its treatment to 1 generation in 20), so the binding of bound-to-
+measurement was tested the right way in step8 instead — and the answer is
+axis-dependent: Care/Harm inert (its shift tracks perturbation magnitude rather than
+direction — the signature of interchangeable keys inside the subspace), Arousal
+steerable (which the bound *permits*: it constrains where probe-derived keys point, not
+what generation does when any in-subspace key is added). What remains untested is
+*breadth* — the layer × pooling × key grid, i.e. the withdrawn step6/7 slopes — and
+the scale question (see the TODO below), which the 3B/8B rung answers directly.
 
 ## M9 — The dilution trap: the steer was only applied to 1 in 20 generations  ❌✅
 Found 2026-10-03 while wiring the `MESE_DRY` mode (`dry_model.py`), and it invalidates
@@ -910,7 +914,8 @@ on its own, geometry-only.
   ```
   (the default seed reproduces the logged generations byte-for-byte, so a plain re-run
   adds shams but no new evidence).
-- 🔴 **BLOCKING — RE-RUN THE STEERER (M9).** The Step 6 and Step 7 steering numbers
+- 🟡 **RE-RUN THE STEERER (M9) — no longer blocking; it recovers breadth, not the claim.**
+  The Step 6 and Step 7 steering numbers
   were produced by a loop that steered only 1 generation in 20, so they are not
   evidence of anything. `SteerController` now arms per generation and prints a
   `[steering audit]` line that must read 100%:
@@ -918,8 +923,10 @@ on its own, geometry-only.
   python step6_steer_all.py     # expect "[steering audit] N/N ... "
   MESE_SHAM=20 python step7_sweep.py
   ```
-  Only after that can any statement be made about whether the probe-derived keys
-  steer. The mechanism (§4.0/M8) does NOT need this re-run.
+  The steering question itself is answered by step8 under an audited loop (M12
+  Care/Harm null + M13d Arousal pass), so this re-run recovers the withdrawn
+  layer × pooling × key *grid* — it no longer gates any claim in the paper.
+  The mechanism (§4.0/M8) never needed it.
 - ✅ DONE (was the old null, now INVALIDATED): probe-grad direction tested in step6;
   layer sweep + last-token search (step7). The *scripts* work and the reading half of
   step7 is valid, but their steering slopes must be discarded until re-run.

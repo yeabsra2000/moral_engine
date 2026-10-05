@@ -515,16 +515,20 @@ controls, however, have not been re-run**, so the last-token > mean contrast rem
   random-split numbers are inflated. The hard set is small (144) and authored by
   us, so it carries author bias — partially mitigated by mirrored pos/neg pairs
   and an automatic leakage/concreteness audit.
-- 🔴 **The steering result is not currently a result.** The `step6`/`step7` steering
-  numbers reported earlier in this draft came from a loop that armed the hook once per
-  scale and disarmed it on the first sample, so only 1 generation in 20 in the "steered"
-  arm was actually steered (measured: 2 of 40). Slopes are therefore diluted ~20× into
-  the sham noise floor, and p = 0.438 was computed on two diluted arms. The bug is fixed
-  and self-auditing, but until the experiment is re-run **this paper has a proven
-  mechanism and no measurement of what the mechanism is supposed to explain.** That
-  asymmetry is the single largest limitation here — larger than the scale boundary —
-  and it is the reason the title no longer asserts a null. Full account in
-  `results.md` §M9 and the revision note.
+- 🟡 **Steering breadth is thin, and the old key-grid is still withdrawn.** The
+  `step6`/`step7` steering numbers reported earlier in this draft came from a loop that
+  armed the hook once per scale and disarmed it on the first sample, so only 1
+  generation in 20 in the "steered" arm was actually steered (measured: 2 of 40) —
+  diluted ~20× into the sham noise floor, p = 0.438 computed on two diluted arms. The
+  bug is fixed and self-auditing, but those slopes stay withdrawn until the re-run
+  (`results.md` §M9). What this paper *can* measure today is what `step8_dose.py`
+  measured with a 100%-audited hook: one layer, one key family, two axes — a Care/Harm
+  null and an Arousal pass, each against a sham distribution. That is enough to
+  establish the axis-dependent claim, but not enough to map *where* steering lives
+  across layers, poolings and keys, and each verdict rests on 15–25 shams (add-one p
+  at its floor). The re-run spec that recovers the grid is in `results.md`'s TODO;
+  the mechanism (§4) and the reading results do not depend on it. Full account in
+  `results.md` §M9, §M12, §M13d and the revision note.
 - Single model; mean pooling plus last-token pooling; Observer layers {12,14,16},
   steering searched at {14,20,26}; no attention-weighted or token-level analysis.
 - **The scale boundary is the second-biggest limitation, and it is deliberate.** Everything
@@ -620,12 +624,14 @@ controls, however, have not been re-run**, so the last-token > mean contrast rem
   z = +2.83, 0/25 shams, p = 0.038 (at the floor), monotone — so the steerer result is
   axis-dependent (M12 null + M13d pass), and an independent replication is available
   via `MESE_SEED=1`;
-  (4) 🔴 **RE-RUN step6 and step7 with the fix**, checking that each prints
-  `[steering audit] N/N` — this is the blocking step, and everything else waits on it;
+  (4) 🟡 **RE-RUN step6 and step7 with the fix**, checking that each prints
+  `[steering audit] N/N` — no longer blocking, since step8 already answered the
+  steering question on two axes; it recovers the withdrawn layer × pooling × key grid;
   (5) **the scale rung**: 3B/8B, matched relative depth, unquantized — the experiment
-  that decides between "structural" and "small-scale" (see §8b), which now needs (4)
-  first; (6) independent human rating of a hard-set sample; (7) larger steering scales
-  (> 4.0) with a fluency cost check.
+  that decides between "structural" and "small-scale" (see §8b). It is independent of
+  (4): the mechanism check on a new model needs only a generation-free step7 run
+  (`MESE_AXES=0`); (6) independent human rating of a hard-set sample; (7) larger
+  steering scales (> 4.0) with a fluency cost check.
 
 ## 8b. The probes we tested, and what each item actually establishes
 
