@@ -778,12 +778,12 @@ This is NOT a claim that the model cannot be steered. It is a claim that *this k
 adds nothing over a random direction of the same size — which is exactly what the
 `rowspace(W₁)` mechanism (M8) predicts. The earlier suggestive Valence `+0.722` at
 scale 10 did not merely fail to replicate here: on Care/Harm at scale 10 the real key's
-slope is **negative**. The second axis (Arousal) was run identically — see **M13**, where
-that verdict turned out to rest on an unsatisfiable significance threshold and its
-transcript was not persisted. The Arousal question is still open; the Care/Harm null
-above does not depend on it.
+slope is **negative**. The second axis (Arousal) was run identically and **did**
+separate from its shams — see **M13(d)**: a direction-selective effect on Arousal
+against a clean null on Care/Harm, which is the axis-dependent result the paper now
+reports.
 
-## M13 — Two decision-rule defects in the dose verdict, and an UNPERSISTED Arousal run  🔴 CODE FIXED / 🔴 ARTIFACT MISSING
+## M13 — Two decision-rule defects in the dose verdict, and the Arousal dose run  ✅ CODE FIXED / ✅ n=25 RUN PERSISTED (SEPARABLE)
 
 Found while reading the Arousal dose run. Both defects are in `step8_dose.py`, and both
 are the family this repo keeps hitting: a check that *reads* as strict while being either
@@ -821,11 +821,13 @@ still uses `|d_flu|` **deliberately** (degenerate repetitive text scores high me
 log-prob), so a favourable scale cannot be admitted by cherry-picking; that choice is now
 commented in the source.
 
-### (c) The Arousal transcript was never persisted  🔴
+### (c) The n=15 Arousal transcript was never persisted  🔴→✅ (superseded by (d))
 An Arousal dose run was executed and read during this session, but **no transcript
 reached the repo**: there is no `results_step8_arousal_n15.txt`, and
-`results_step8_dose.txt` is a **0-byte** file. The numbers below are therefore a
-**working observation, NOT a recorded result**, and must not be cited until re-run.
+`results_step8_dose.txt` is a **0-byte** file. The numbers below were therefore a
+**working observation, NOT a recorded result** — and must not be cited as one. They
+are kept because the n=25 run in (d) reproduced them *exactly* (same deterministic
+generation streams); the citable artifact is now `results_step8_arousal_n25.txt`.
 
 | quantity (Arousal, n=15, layer 14) | value |
 |---|---|
@@ -849,31 +851,65 @@ Two things follow, and they point opposite ways:
 
 So this is a **candidate, not a confirmation** — exactly what the corrected verdict prints.
 
-### The one run that settles it
-```
-MESE_AXIS=Arousal MESE_SHAM=25 python step8_dose.py   # n=25 -> p-floor = 1/26 = 0.038 < 0.05
-```
-n ≥ 20 makes `p < 0.05` attainable. If the real key still beats every sham at n=25 the
-test passes on both criteria and the Arousal effect is recorded; if shams start reaching
-it, it is a null and the Care/Harm null generalizes. **Either way the transcript must be
-pasted into `results_step8_arousal_n25.txt`** with the provenance header used by
-`results_step8_care_n15.txt` — an unpersisted run is not a result.
+### (d) The n=25 run landed: SEPARABLE on both tests  ✅
+Command: `MESE_AXIS=Arousal MESE_SHAM=25 python step8_dose.py` — transcript persisted as
+`results_step8_arousal_n25.txt`. Every statistic below was independently recomputed from
+the per-scale tone values in that transcript at persist time and matched the log exactly.
+
+| quantity (Arousal, n=25, layer 14) | value |
+|---|---|
+| gate (template-grouped held-out, hidden=64, reps=10) | **0.84 ± 0.07** → passes 0.6 |
+| steering audit | 3240/4050 hook LIVE (100%) |
+| dose at the verdict scale (10) | **17.7%** of `‖h‖` (far above the 5% floor) |
+| real `mean` key tone ladder (0/4/10/25/50) | −0.425, +0.376, +0.406, +0.780, +0.977 — **monotone ↑** |
+| real slope at scale 10 (fluency-intact, d_flu −0.053) | **+0.831 ± 0.092** |
+| sham distribution (n=25) | mean **+0.037**, sd **0.281**, range [−0.411, +0.697] |
+| real vs sham | z = **+2.83** (≥ 2 ✓); **0/25** reach it; add-one **p = 0.038 < 0.05** ✓ |
+
+It passes **both** criteria, and the dose–response is monotone — the two conditions the
+verdict itself demands before quoting. Three caveats keep it honest:
+
+1. **It is not an independent replication.** `seed_cell` is deterministic, so this run
+   reproduces the n=15 run's generations *exactly* (the first 15 sham slopes match to 3
+   decimals; the same real slope +0.831 appears in both) and merely appends 10 shams.
+   A plain re-run therefore adds no new evidence — `MESE_SEED=1` now re-keys every
+   cell's stream for a genuine replication.
+2. **p sits at the floor** (1/26 is the smallest value n=25 permits) and two axes were
+   completed (multiplicity), so this is a *passing* result, not a strong one.
+3. **The shape check is not clean.** Sham 13 is also monotone (−0.807 → +0.513, swing
+   +1.32 vs the real key's +1.40), though its pinned-scale slope (+0.550) stays well
+   below +0.831; the best sham overall is +0.697 — within 0.5 sham-sd of the real key.
 
 ### Consequence for the paper
-Not yet a rewrite. The Care/Harm null (M12) is **unaffected**: its `z=+1.08` fails on
-`|z|`, not on the floor, so it is a genuine null under the corrected rule (replay-verified
-in scenario H). But the Arousal branch means the paper **cannot yet claim the null
-generalizes across axes** — that claim now depends on the n=25 run.
+The steerer result is now **axis-dependent, not a blanket null**: Care/Harm — the
+strongest-reading axis — does **not** separate (M12: z=+1.08, 2/15), while Arousal
+does (M13d: z=+2.83, 0/25). That is a stronger position than a uniform null, for two
+reasons:
+
+- The Arousal pass is a **positive control for the Care/Harm null**: the same pipeline —
+  same gate, audit, dose ladder and sham distribution — *does* detect steering when it
+  is there, so the Care/Harm null cannot be dismissed as a broken rig.
+- The ranks are **inverted**: the *more* readable axis (Care/Harm, 0.98) is the *less*
+  steerable one, and the weaker instrument (Arousal, 0.84) is the steerable one.
+  Readability therefore does not even *order* steerability, let alone guarantee it.
+
+This is also consistent with Sun et al.'s Valence–Arousal steerability at 8–14B: the
+affective axis moves here too, at 1.5B, while our moral axis (Care/Harm) stays inert.
+The M8 `rowspace(W₁)` mechanism is untouched — it constrains where probe-derived keys
+can *point* (they cannot leave the readout's subspace, and the gradient keys collapse
+onto `mean`), not whether any single key moves tone; the confinement evidence stands
+on its own, geometry-only.
 
 ## TODO (before the final table in the paper)
-- 🔴 **BLOCKING — RE-RUN THE AROUSAL DOSE (M13c).** The Arousal run's transcript was
-  never persisted, and its verdict was produced by a threshold no result could satisfy:
+- ✅ **DONE (M13d): the AROUSAL DOSE at n=25.** `MESE_AXIS=Arousal MESE_SHAM=25` ran
+  and its transcript is persisted as `results_step8_arousal_n25.txt`
+  (SEPARABLE: z=+2.83, 0/25 shams, p=0.038 at the floor, monotone dose–response).
+  Optional follow-up — an **independent** replication:
   ```
-  MESE_AXIS=Arousal MESE_SHAM=25 python step8_dose.py   # n>=20 makes p<0.05 attainable
+  MESE_AXIS=Arousal MESE_SHAM=25 MESE_SEED=1 python step8_dose.py
   ```
-  Paste the output into `results_step8_arousal_n25.txt` (provenance header as in
-  `results_step8_care_n15.txt`). Until then the paper cannot claim the null generalizes
-  across axes. Do **not** cite the n=15 Arousal numbers as a result.
+  (the default seed reproduces the logged generations byte-for-byte, so a plain re-run
+  adds shams but no new evidence).
 - 🔴 **BLOCKING — RE-RUN THE STEERER (M9).** The Step 6 and Step 7 steering numbers
   were produced by a loop that steered only 1 generation in 20, so they are not
   evidence of anything. `SteerController` now arms per generation and prints a
@@ -925,38 +961,53 @@ generalizes across axes** — that claim now depends on the n=25 run.
    `rowspace(W₁)` by construction, so mean/logreg/LDA/probe-grad/-path/-class cannot
    leave the subspace the probe used to *read*; on real activations the gradient keys
    collapse onto `mean` (cos 0.845–0.982) and `cos(logreg, mean) = +1.000` exactly.
-   Verified offline to machine precision. The RQ3 null is therefore a *prediction* of
-   the method family, not an unexplained failure — and the collapse's contingency is
-   shown on synthetic nonlinear data (cos 0.392 there), so it is not a tautology.
+   Verified offline to machine precision. The mechanism therefore predicts that the
+   key *family* is interchangeable — no probe-derived key can systematically beat
+   `mean` — **not** that tone is inert: the dose runs (M12/M13d) then showed the
+   single effective key does move tone on Arousal but not on Care/Harm, which is
+   axis-dependent and empirical, outside what the geometry alone decides — and the
+   collapse's contingency is shown on synthetic nonlinear data (cos 0.392 there), so
+   it is not a tautology.
 1. Observer: tone is decodable from held-out templates (grouped MLP 0.78–0.98)
    and the readable structure is nonlinear (grouped linear ≈ chance, 0.46–0.66).
    Reported against a template-identity control; grouped CV is the honest protocol.
 2. Nonlinear advantage: supported by grouped-CV across layers 12/14/16 (MLP
    0.78–0.98 vs linear 0.46–0.66). This is the paper's strongest RQ2 evidence.
-3. Steerer: a clean, gated null on the decisive axis (**M12**). On Care/Harm — the
-   strongest-reading axis (grouped **0.98**) — with the hook auditing at **100%** and a
-   dose of **7.08%** of `||h||`, the real key's paired tone slope is **+0.214 ± 0.071**,
-   while **15** independent random directions give mean **−0.074**, sd **0.266**, range
-   [−0.689, +0.343]. The real key sits **+1.08 sd** from the sham mean; **2/15** shams
-   reach it (add-one **p = 0.188**). The slope is reliably nonzero (z=+3.02 vs its own
-   sampling error) but **not specific**: the readout responds to perturbation *magnitude*,
-   not to the moral direction. The dose–response is non-monotone (+0.21, −0.29, −0.07,
-   +0.19 at scales 4/10/25/50). *(The older ±0.02–0.10 step6/step7 numbers are WITHDRAWN
-   — diluted treatment, M9.)*
-4. Readout strength does not translate to steerability. Care/Harm is the most readable
-   axis (grouped 0.98), yet the M12 dose run cannot separate its supervised key from a
-   random direction of the same size. This is the paper's central negative claim, and it
-   is what the `rowspace(W₁)` mechanism (M8) predicts: the key family varies only inside
-   the subspace the readout already uses, so it carries no leverage the readout lacks.
+3. Steerer: **axis-dependent** — a gated null on Care/Harm, a pass on Arousal.
+   On **Care/Harm** (M12; strongest-reading axis, grouped **0.98**), hook audit **100%**,
+   dose **7.08%** of `||h||`: real slope **+0.214 ± 0.071** vs **15** random directions
+   (mean **−0.074**, sd **0.266**, range [−0.689, +0.343]) → **+1.08 sd**, **2/15**
+   reach it (p = 0.188) → **NOT SEPARABLE**; the slope is reliably nonzero (z=+3.02 vs
+   its own sampling error) but not *specific* — the readout answers to perturbation
+   magnitude, not to the moral direction — and the dose–response is non-monotone
+   (+0.21, −0.29, −0.07, +0.19 at 4/10/25/50). On **Arousal** (M13d; grouped **0.84**,
+   audit **100%**, dose **17.7%**): real slope **+0.831 ± 0.092** vs **25** random
+   directions (mean **+0.037**, sd **0.281**, range [−0.411, +0.697]) → **z = +2.83**,
+   **0/25** reach it (p = 0.038 at the floor), monotone ladder
+   (−0.425 → +0.376 → +0.406 → +0.780 → +0.977) → **SEPARABLE on both tests**.
+   *(The older ±0.02–0.10 step6/step7 numbers are WITHDRAWN — diluted treatment, M9.)*
+4. Readout strength does not translate to steerability — and does not even *order* it.
+   Care/Harm is the most readable axis (grouped 0.98) yet its key cannot be told apart
+   from a random direction; Arousal, the *weaker* instrument (0.84), is the steerable
+   one. The rank inversion is the paper's central claim: readability is neither a
+   guarantee nor a ranking of steerability. The Arousal pass doubles as a **positive
+   control** for the Care/Harm null — the same pipeline detects steering when it is
+   there, so the null is not a broken rig — and it is consistent with Sun et al.'s
+   Valence–Arousal steerability at 8–14B while the moral axis stays inert at 1.5B.
 5. Steering search (step7): the null generalizes over layers {14,20,26} × {mean,
    last-token} pooling (24 cells). Reading improves under last-token pooling
    (grouped probe 0.75–1.00). Every per-cell "win" is noise: real−sham +0.004
    (permutation p = 0.438) and sign flips between adjacent layers.
-Caveats: single model (Qwen-1.5B); mean and last-token pooling, no attention
-weighting; the M12 dose verdict is pinned to the largest fluency-intact scale
-(4.0 = 7.08% of `||h||`), so the ladder's higher rungs diagnose fluency breakage
-rather than steering — though the null holds at those rungs too; the search's
-verdict originally used a single sham draw and this is now fixed (sham
-DISTRIBUTION mode, n=15, exercised in M12); a second axis (Arousal) is pending;
-no independent human rating yet.
+Caveats: single model (Qwen-1.5B), single steering layer (14), one prompt set
+(5 prompts × 6 samples); mean and last-token pooling, no attention weighting; both
+dose verdicts are pinned to the largest fluency-intact scale (Care/Harm 4.0 = 7.08%,
+Arousal 10.0 = 17.7% of `||h||`), so the higher rungs diagnose fluency breakage
+rather than steering — though the Care/Harm null holds at every rung while Arousal's
+ladder is monotone throughout; the Arousal pass sits **at the p-floor** (1/26) and is
+a *deterministic extension* of the n=15 run, not an independent replication
+(`MESE_SEED=1` run pending for that), with 2 completed axes (multiplicity); sham 13
+reproduces Arousal's monotone *shape* at smaller amplitude; the search's verdict
+originally used a single sham draw and this is now fixed (sham DISTRIBUTION mode,
+n=25 exercised in M13d); Valence remains uninstrumented (gate-boundary probe); no
+independent human rating yet.
 

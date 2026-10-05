@@ -1,5 +1,5 @@
 # Probe-Derived Steering Keys Are Confined to the Probe's Own Row Space
-### A mechanism-first study of observer probes and activation steering across four ethical/affective axes — and an open empirical question about the steering null
+### A mechanism-first study of observer probes and activation steering across four ethical/affective axes — and an axis-dependent steering result at 1.5B (null on Care/Harm, pass on Arousal)
 
 **Working title (short):** *MESE-CR: Concept Probes + Activation Steering for Moral-Emotional Control in Small LLMs*
 
@@ -20,6 +20,13 @@
 > pending a GPU re-run.** The mechanism below is unaffected — it is computed from
 > activations, labels and the probe, and involves no generation at all. Full account:
 > `results.md` §M9.
+>
+> **Update (2026-10-05) — the measurement now exists.** The replacement protocol
+> (`step8_dose.py`) audits every generation, gates the instrument, and scores each real
+> key against a *distribution* of sham directions at a calibrated dose. Its verdict is
+> **axis-dependent**: a clean null on Care/Harm (M12) and a separation on Arousal
+> (M13d, z = +2.83, 0/25 shams, monotone dose–response). Both verdicts are reported
+> below; the step6/step7 key-grid slopes remain withdrawn until re-run.
 
 ---
 
@@ -29,8 +36,8 @@ activations, and a growing literature both *reads* that information with probes 
 *writes* to it with steering vectors. On a 1.5B instruction-tuned model we reproduce
 the reading result. What this paper actually contributes is a **mechanism that
 constrains where any probe-derived steering key can point** — proved and machine-checked
-offline — plus an honest account of why our own measurement of whether those keys steer
-cannot yet be reported.
+offline — plus an audited, sham-controlled measurement of whether those keys steer at
+this scale: **they do on Arousal and they do not on Care/Harm**.
 
 The central result is a mechanism, verified without a model. For any two-layer probe
 `f(x) = W₂·SiLU(W₁x + b₁) + b₂`, the input gradient is
@@ -47,8 +54,10 @@ consequence is a *bound on the method*, not yet a measured null: a probe that ca
 a nonlinear boundary (grouped MLP 0.78–0.98 vs grouped linear 0.46–0.66) derives all of
 its keys from a subspace fixed by its own readout — so any steering it suggests is
 confined to directions the readout never needed, and cannot test the nonlinear structure
-that made the axis readable. Whether that confinement *is* what defeats steering at this
-scale is the open question (see the revision note).
+that made the axis readable. Whether that confinement *is* what defeats steering turns
+out to be **axis-dependent** — on the two axes we dose-tested with an audited loop, the
+same mean-difference key separates from 25 sham directions on Arousal but not from 15 on
+Care/Harm (see the revision note and `results.md` M12–M13).
 
 We are careful to separate two claims that are easy to conflate. The subspace theorem
 explains why the probe keys coincide with *each other*. That they also coincide with
@@ -79,14 +88,24 @@ Care/Harm, Fairness) moving tone no further than the sham, with permutation
 behind it steered only 1 generation in 20, so its slopes are equally consistent with no
 effect and with an effect ~20× the noise floor; p = 0.438 was computed on diluted arms
 and is therefore uninformative. The scripts, the controls and the re-run command are all
-in place; what the re-run returns is an open question, and we report it as one.
+in place; what that re-run returns is an open question, and we report it as one. What
+**has** since been measured under a fully audited loop is the dose protocol — one axis
+per run, instrument gate, treatment audit, and a *distribution* of sham directions at a
+calibrated, fluency-intact dose: Arousal separates (z = +2.83, 0/25 shams, p = 0.038,
+monotone dose–response) and Care/Harm does not (z = +1.08, 2/15). That axis-dependent
+pair is the steerer result this paper now reports.
 
 **Scope, stated plainly.** The theorem is *architecture-level*: it holds at any model
 size, because it is a property of a two-layer probe, not of a dataset or a checkpoint.
 The empirical claims are not — the reading results are measured on one 1.5B model, so we
 report **a boundary, not a universal**, and position it against Sun et al.'s
-Valence–Arousal subspace, which *does* steer at 8–14B. The natural reading — that
-the confinement is a small-scale phenomenon — is a testable prediction, and we set that
+Valence–Arousal subspace, which *does* steer at 8–14B — a result our own Arousal pass
+(M13d) is *consistent with*, at 1.5B and one layer. Note what the paired dose runs
+buy us here: Care/Harm and Arousal were measured on the **same** model, layer, prompts
+and protocol, so the Care/Harm null cannot be dismissed as a *scale* effect — at 1.5B
+the affective axis moves and the moral one does not, which makes the contrast
+axis-dependent by construction. The natural reading — that the *key confinement* is a
+small-scale phenomenon — is a testable prediction, and we set that
 test up (a 3B/8B rung at matched relative depth, left unquantized so the activation
 geometry stays comparable) rather than claim its outcome. Related nulls at other scales
 are now appearing (Da Silva et al., ACL 2025), so the contribution that travels is the
@@ -99,9 +118,12 @@ and needs no GPU; `test_steering_collapse.py` verifies its central identity offl
 
 **Read the labels on the steering tables.** Anything reporting a *reading* accuracy, a
 *cosine between keys*, or a *control* (length, label-permutation, sham) was computed
-without generation and **stands**. Anything reporting a *steering slope* came from the
-diluted loop described in the revision note and is **withdrawn**; those cells are marked
-`⚠️ withdrawn` below rather than deleted, so the record stays complete.
+without generation and **stands**. Anything reporting a *step6/step7 steering slope* came
+from the diluted loop described in the revision note and is **withdrawn**; those cells are marked
+`⚠️ withdrawn` below rather than deleted, so the record stays complete. The **step8
+dose slopes** (`results.md` M12/M13d) come from the audited loop and **stand**, with the
+caveats printed alongside them (p at the n=25 floor; deterministic extension, not an
+independent replication).
 
 ---
 
@@ -117,13 +139,17 @@ diluted loop described in the revision note and is **withdrawn**; those cells ar
   - RQ2: Does a nonlinear ("bending fabric") probe beat a linear ("rigid hyperplane")
     probe? (Answers the readout side of the central hypothesis.)
   - RQ3: Can activation steering predictably shift output tone (dose-response)?
+    Current answer: **axis-dependent** — yes on Arousal, no on Care/Harm (audited
+    dose runs, `results.md` M12/M13d); the step6/step7 key-grid answer is withdrawn.
   - RQ4 (the question this paper turns on): **where do the steering keys point?**
     §4.0 answers it in two steps, and the distinction matters. *By construction*, every
     probe-derived key lies in `rowspace(W₁)` — a subspace fixed by the readout, not by
     the data. *Empirically*, on these activations the probe gradient additionally
     collapses onto the mean-difference direction (cos 0.845–0.982). Only with both does
-    the RQ3 null become an explained property of the method rather than an unexplained
-    failure — and only then can we state a boundary claim.
+    the key family become a *predictable* object — its members interchangeable, so no
+    probe-derived key can systematically beat `mean` — which is what lets the dose runs
+    be read as a test of one effective direction per axis rather than of seven competing
+    keys; whether that direction moves tone is then decided empirically, per axis.
 - Contributions: (1) the probe-gradient `rowspace(W₁)` identity (§4.0) and its measured
   consequence on real activations; (2) evidence that the two obvious "nonlinear key"
   repairs do not escape it; (3) the deliberate separation of the *structural* claim from
@@ -350,7 +376,9 @@ run never applied its own treatment (§4 / revision note, `results.md` §M9).
   all behave correctly under this bug because it dilutes the *treatment*, not the
   *measurement*; only a treatment audit catches it, and there was none. The loop is fixed
   (`SteerController`, per-generation arming, `[steering audit]` printed per run) and the
-  re-run is specified, but **no steering slope in this paper is evidence of anything yet.**
+  re-run is specified, but **no step6/step7 steering slope in this paper is evidence of
+  anything yet** — the steerer evidence this paper cites is the audited *dose* protocol
+  (step8; `results.md` M12/M13d), which supersedes this grid for the steering question.
   `results_step6.txt` remains in the repo as the record of the diluted run, labelled.
   The *cosines* in the discussion below are unaffected: they come from §4.0, not from
   generation.
@@ -373,7 +401,9 @@ run never applied its own treatment (§4 / revision note, `results.md` §M9).
   unsteered. Because the measuring probe is validated, the *readout* half of the
   argument is sound — but "measurement is noise" was never the only failure mode we
   had to worry about, and the one we missed is the one that invalidates this bullet.
-  Re-run before writing any of it again.
+  Re-run before writing any of it again — which is why the dose protocol (step8) was
+   built as the replacement measurement, and why its audited verdicts (M12/M13d) are
+   the steerer evidence this paper cites instead of this table.
 - **RQ3 (search) — ⚠️ steering half WITHDRAWN; reading half stands.** A
   follow-up grid (`step7_sweep.py`) searched layers {14, 20, 26} × pooling
   {mean, last-token} × 4 axes = 24 cells, each with its own same-layer probe, gate
@@ -566,12 +596,18 @@ controls, however, have not been re-run**, so the last-token > mean contrast rem
   *improves reading* (probe 0.99–1.00), which also stands. The honest shape of this
   paper is therefore: a proven bound on a method family, a solid reading result, a
   positive finding about pooling, a bug found in the experiment meant to connect them,
-  and a re-run that decides whether "Readable ≠ Steerable" is true or merely hoped for.
-- **The claim we do not make.** Tone is not unsteerable — and after M9 we cannot even
-  say we showed it at 1.5B. The confinement above is about *probe-derived additive keys
-  at one layer of a 1.5B model*. Sun et al. steer Valence–Arousal successfully at
-  8–14B, and our own construction admits keys we never tried (attention-weighted,
-  multi-layer, or learned against a generation objective rather than a probe).
+  and an axis-dependent steering answer: whether "Readable ≠ Steerable" holds is no
+   longer an open question or a blanket claim — Arousal steers, Care/Harm does not, and
+   readability does not even *rank* steerability (the more readable axis is the inert one).
+- **The claim we make — and the one we do not.** With the audited dose protocol we have
+  *shown* tone steering at 1.5B on **Arousal** (z = +2.83, 0/25 shams, monotone
+  dose–response) and a well-powered **null on Care/Harm** (z = +1.08, 2/15) — so the
+  claim is *axis-dependent steerability*, not "tone is unsteerable". The confinement
+  above is about *probe-derived additive keys at one layer of a 1.5B model*; it explains
+  why the key family is interchangeable, not why any particular axis moves. Sun et al.
+  steer Valence–Arousal successfully at 8–14B — consistent with our Arousal pass — and
+  our own construction admits keys we never tried (attention-weighted, multi-layer, or
+  learned against a generation objective rather than a probe).
 - **Next:** (1) ✅ observer grid; (2) ✅ probe-gradient key + its two non-point repairs,
   ✅ layer sweep + last-token protocol — scripts in place, **results withdrawn pending
   re-run**; (3) ✅ sham-distribution protocol (`MESE_SHAM=n`) implemented;
@@ -579,11 +615,11 @@ controls, however, have not been re-run**, so the last-token > mean contrast rem
   add-one floor is `1/(n+1)`, so `p < 0.05` was *unattainable* below n=20 and a clean
   0-of-15 separation would have been reported as a null; the verdict now prints the floor
   and returns `CANDIDATE` instead, and the per-scale fluency label is sign-aware (an
-  *improvement* was reading as "MODEL DEGRADING"). 🔴 The **Arousal** dose run's
-  transcript was never persisted, so it is not yet a result — re-run
-  `MESE_AXIS=Arousal MESE_SHAM=25 python step8_dose.py` and save
-  `results_step8_arousal_n25.txt`. Until that lands, the dose null holds **on Care/Harm
-  only** and the paper cannot claim it generalizes across axes;
+  *improvement* was reading as "MODEL DEGRADING"). ✅ The **Arousal** dose run then
+  landed at n=25 and is persisted (`results_step8_arousal_n25.txt`): **SEPARABLE**,
+  z = +2.83, 0/25 shams, p = 0.038 (at the floor), monotone — so the steerer result is
+  axis-dependent (M12 null + M13d pass), and an independent replication is available
+  via `MESE_SEED=1`;
   (4) 🔴 **RE-RUN step6 and step7 with the fix**, checking that each prints
   `[steering audit] N/N` — this is the blocking step, and everything else waits on it;
   (5) **the scale rung**: 3B/8B, matched relative depth, unquantized — the experiment

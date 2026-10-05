@@ -452,6 +452,13 @@ _s8 = open("step8_dose.py", encoding="utf-8").read()
 check("sham distribution is configurable (MESE_SHAM)", float("MESE_SHAM" in _s8), 1.0, 1.001)
 check("sham sloped, not just generated",
       float("SHAM_SLOPES" in _s8), 1.0, 1.001)
+# (5b) An independent replication must be REQUESTABLE. seed_cell is deterministic,
+#      so a plain re-run reproduces the logged generations exactly -- it extends the
+#      sham count but cannot replicate anything. MESE_SEED re-keys every cell's
+#      stream; without it, "re-run to confirm" is a command that does nothing new.
+check("replication knob present (MESE_SEED)", float("MESE_SEED" in _s8), 1.0, 1.001)
+check("default seed still reproduces the logged runs",
+      float('SEED_REP == "0"' in _s8), 1.0, 1.001)
 print("       -> the real key is compared against a NULL DISTRIBUTION of slopes,")
 print("          which is the only comparison a no-effect claim can rest on.")
 
@@ -510,10 +517,17 @@ check("Care/Harm (2/15, z~1.08) still reads NULL",
       float(_v2 == "NULL"), 1.0, 1.001)
 print(f"       (replay: z={_z2:+.2f}, p={_p2:.3f} -> '{_v2}'; matches the logged +1.08)")
 
-# 25 shams make the same separation formally significant: 0/25 -> p = 1/26 = 0.038.
-_many = [(-1) ** i * (0.10 + 0.01 * i) for i in range(25)]
-check("hypothetical 0/25 shams reads SEPARABLE (test satisfiable)",
-      float(_verdict(0.831, _many)[0] == "SEPARABLE"), 1.0, 1.001)
+# The n=25 run (persisted as results_step8_arousal_n25.txt) makes the same
+# separation formally significant: 0/25 -> p = 1/26 = 0.038. These are the real
+# sham slopes (tone@10 - tone@0) read off that transcript, so the check replays an
+# ACTUAL run rather than a synthetic one; z reproduces the logged +2.83.
+_ar25 = [0.003, 0.227, -0.012, 0.056, 0.254, 0.208, 0.459, -0.121, 0.009,
+         0.045, 0.697, -0.253, -0.058, 0.550, -0.027, -0.276, 0.172, 0.267,
+         0.018, -0.329, -0.346, -0.312, -0.411, 0.058, 0.056]
+_v3, _z3, _p3, _pf3 = _verdict(0.831, _ar25)
+check("Arousal n=25 (0/25, z~2.83) reads SEPARABLE (test satisfiable)",
+      float(_v3 == "SEPARABLE"), 1.0, 1.001)
+print(f"       (replay: z={_z3:+.2f}, p={_p3:.3f} at floor {_pf3:.3f} -> '{_v3}')")
 
 print("RESULT:", "ALL PASS" if not fails else f"FAILED: {fails}")
 raise SystemExit(1 if fails else 0)

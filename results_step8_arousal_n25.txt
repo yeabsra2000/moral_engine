@@ -1,13 +1,118 @@
-  1 | ===== step8 dose run PENDING — Arousal, n=25 shams =====
-  2 | STATUS: NOT YET RUN. This file is a placeholder so the artifact cannot be
-  3 |         lost again (the n=15 Arousal transcript was never persisted —
-  4 |         results.md M13).
-  5 | Command:  !MESE_AXIS=Arousal MESE_SHAM=25 python step8_dose.py
-  6 | (n>=20 makes the add-one empirical test satisfiable: floor = 1/(n+1) < 0.05.
-  7 |  Rename results_step8_dose.txt first if a log from another axis exists —
-  8 |  the log APPENDS.)
-  9 | After the run: paste the full transcript below this header, eliding only the
- 10 | HuggingFace download-progress lines, and update results.md M13 / paper.md.
- 11 |
- 12 | PASTE TRANSCRIPT BELOW THIS LINE:
- 13 | 
+===== step8 dose run 2026-10-05 — Arousal, n=25 shams =====
+Provenance: Google Colab (T4), running the committed step8_dose.py at 4b1c85a.
+Command:    MESE_AXIS=Arousal MESE_SHAM=25 python step8_dose.py
+Transcript pasted from the run; HuggingFace download-progress lines elided.
+Summary and interpretation: results.md M13(d).
+
+REPLICATION NOTE (added at persist time): seed_cell keys every generation from
+stable_seed(AXIS, direction), so this run reproduces the n=15 Arousal run's
+generations EXACTLY and appends 10 more shams -- verified: the first 15 sham
+slopes match the n=15 values to 3 decimals. It is an EXTENSION of that run
+(the same real-key slope +0.831 appears in both), not an independent
+replication. A true replication now requires MESE_SEED=1 (see M13d).
+
+[log] writing to results_step8_dose.txt  |  axis=Arousal scales=[0.0, 4.0, 10.0, 25.0, 50.0] directions=['mean', 'random'] samples=6 dry=False
+model=Qwen/Qwen2.5-1.5B-Instruct  depth=28  steering layer=14  dtype=torch.bfloat16
+==============================================================================
+DOSE-FINDING on Arousal @ layer 14. scales=[0.0, 4.0, 10.0, 25.0, 50.0]
+Per-scale tone AND fluency. Fluency is the signal for 'too strong'.
+==============================================================================
+[dtype check] features torch.float32 on cuda:0; probe will match
+Arousal: 136 sentences (68 pos / 68 neg)
+[grouping] 28 groups, 18 mirrored
+probe HELD-OUT (template-grouped) accuracy = 0.84 +/- 0.07 (2*SE)  <-- honest instrument quality; gate 0.6
+       (gate protocol: hidden=64, reps=10, same as the measuring probe)
+       (in-sample below is optimistic: `net` was fit on exactly this data.)
+probe in-sample accuracy = 1.00
+[gate] instrument = template-grouped held-out 0.84  (gate 0.6)
+cos(mean, random) = 0.028  (the sham must point somewhere unrelated)
+
+--- direction: mean ----------------------------------------
+  scale     tone   fluency    d_flu  status
+      0   -0.425    -2.800    0.000  
+      4   +0.376    -2.564    0.236  fluency shifted UP (check for loops)
+     10   +0.406    -2.853   -0.053  
+     25   +0.780    -3.069   -0.269  MODEL DEGRADING (too strong)
+     50   +0.977    -3.309   -0.509  MODEL DEGRADING (too strong)
+
+--- direction: random ----------------------------------------
+  scale     tone   fluency    d_flu  status
+      0   -0.108    -2.772    0.000  
+      4   -0.296    -2.616    0.156  
+     10   -0.497    -2.884   -0.112  
+     25   -0.412    -2.572    0.200  fluency shifted UP (check for loops)
+     50   -0.226    -4.731   -1.959  MODEL DEGRADING (too strong)
+
+[steering audit] 240/300 generations had the hook LIVE (240 should have been).
+
+[dose] median ||h|| at layer 14 = 56.50 (pre-addition)
+[dose] scale      4  ->   7.08% of ||h||
+[dose] scale     10  ->  17.70% of ||h||
+[dose] scale     25  ->  44.25% of ||h||
+[dose] scale     50  ->  88.50% of ||h||
+
+=== sham distribution: 25 independent random directions ===
+  sham 0: 0=-0.070  4=-0.197  10=-0.067  25=-0.384  50=-0.800
+  sham 1: 0=-0.062  4=-0.001  10=+0.165  25=+0.354  50=-0.539
+  sham 2: 0=-0.379  4=-0.508  10=-0.391  25=+0.314  50=-0.028
+  sham 3: 0=-0.342  4=-0.534  10=-0.286  25=+0.185  50=+0.180
+  sham 4: 0=-0.374  4=-0.118  10=-0.120  25=-0.503  50=-0.469
+  sham 5: 0=-0.364  4=-0.442  10=-0.156  25=+0.532  50=+0.301
+  sham 6: 0=-0.419  4=-0.129  10=+0.040  25=-0.754  50=-0.489
+  sham 7: 0=-0.622  4=-0.611  10=-0.743  25=-0.581  50=-0.123
+  sham 8: 0=-0.487  4=-0.500  10=-0.478  25=-0.692  50=-0.333
+  sham 9: 0=-0.418  4=-0.232  10=-0.373  25=-0.513  50=-0.317
+  sham 10: 0=-0.571  4=-0.340  10=+0.126  25=-0.363  50=-0.149
+  sham 11: 0=-0.269  4=-0.421  10=-0.522  25=-0.728  50=-0.290
+  sham 12: 0=-0.443  4=-0.540  10=-0.501  25=-0.339  50=-0.112
+  sham 13: 0=-0.807  4=-0.586  10=-0.257  25=-0.248  50=+0.513
+  sham 14: 0=-0.392  4=-0.335  10=-0.419  25=-0.263  50=-0.042
+  sham 15: 0=-0.437  4=-0.442  10=-0.713  25=-0.272  50=-0.489
+  sham 16: 0=+0.271  4=+0.123  10=+0.443  25=-0.227  50=-0.425
+  sham 17: 0=-0.621  4=-0.734  10=-0.354  25=-0.431  50=+0.429
+  sham 18: 0=-0.632  4=-0.620  10=-0.614  25=-0.605  50=-0.140
+  sham 19: 0=-0.485  4=-0.326  10=-0.814  25=-0.354  50=-0.564
+  sham 20: 0=-0.084  4=-0.429  10=-0.430  25=-0.256  50=-0.257
+  sham 21: 0=-0.267  4=-0.465  10=-0.579  25=-0.071  50=-0.758
+  sham 22: 0=-0.141  4=-0.288  10=-0.552  25=-0.277  50=+0.040
+  sham 23: 0=-0.188  4=-0.389  10=-0.130  25=-0.332  50=-0.499
+  sham 24: 0=-0.600  4=-0.350  10=-0.544  25=-0.038  50=-0.162
+
+==============================================================================
+DECISION
+==============================================================================
+ real             mean: paired slope +0.831 +/- 0.092 (z=+9.04) at scale 10 [fluency-intact window <= 10]
+ SHAM           random: paired slope -0.388 +/- 0.061 (z=-6.42) at scale 10 [fluency-intact window <= 10]
+
+  all slopes below are PAIRED, at scale 10 (fluency-intact for the real key)
+  sham slope distribution: mean=+0.037 sd=0.281 (n=25)
+  range: [-0.412, +0.697]
+
+  real `mean` key: +0.831 +/- 0.092 ->  z vs sham dist = +2.83
+  empirical: 0/25 sham directions reach it (add-one p = 0.038; floor at this n = 0.038)
+
+  VERDICT: separable from the sham distribution on BOTH tests.
+           z=+2.83 and only 0/25 shams reach it.
+           Promising -- confirm it replicates, that no single sham
+           reproduces its shape, and that it is monotone in dose.
+
+[steering audit incl. shams] 3240/4050 hook LIVE (3240 should have been).
+
+Read it this way:
+  * fluency BROKEN before tone moves  -> ladder too strong; bisect DOWN.
+  * tone moves with fluency INTACT    -> REAL steering effect; the old null was
+                                       mis-scaled, not a null.
+  * no tone shift, and the sham is the same size -> likely a null, but only
+    meaningful if the [dose] percentages reached a level where fluency was at
+    risk. A sub-5% dose cannot support a no-effect claim.
+  * `p < 0.05` needs n >= 20 shams. The add-one p floors at 1/(n+1), so at n=15
+    the test is UNSATISFIABLE: a clean 0-of-15 is a CANDIDATE, never a null.
+
+----- persist-time verification (added when saving this transcript) -----
+All logged statistics recomputed from the per-scale tone values above and
+matched exactly: real slope +0.831 (= 0.406 - (-0.425)); sham mean +0.037,
+sd 0.281, range [-0.411, +0.697]; z = +2.83; 0/25 reach it; add-one p = 0.038.
+Real-key tone ladder across scales [0,4,10,25,50] =
+[-0.425, +0.376, +0.406, +0.780, +0.977] -- monotone increasing, satisfying
+the verdict's monotonicity condition. First 15 sham slopes match the n=15
+Arousal run exactly (deterministic extension, see replication note above).

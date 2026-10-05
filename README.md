@@ -45,26 +45,36 @@ artifacts, and the repo now refuses to report them.
    and audits itself (`SteerController`, `[steering audit] N/N` on every run); **re-run
    step6/step7 on GPU before citing any steering number.** Full account: `results.md` M9.
 
-   **The replacement experiment is now in, and it is still a null.** `step8_dose.py` on
-   **Care/Harm** — the best-reading axis (grouped **0.98**) — with the hook auditing
+   **The replacement experiment is in, and the verdict is axis-dependent.**
+   `step8_dose.py` on **Care/Harm** — the best-reading axis (grouped **0.98**) — with the hook auditing
    **100%** and a **7.08%** dose of `||h||`, gives a real-key paired tone slope of
    **+0.214 ± 0.071** against a distribution of **15 random directions** (mean −0.074,
    sd 0.266, range [−0.689, +0.343]). That is **+1.08 sd**, with **2/15** shams reaching it
    (add-one **p = 0.188**). The shift is reliably nonzero yet **not specific**: the readout
    moves with perturbation *magnitude*, not with the moral direction, and the
    dose–response is non-monotone (+0.21, −0.29, −0.07, +0.19 at scales 4/10/25/50). A
-   random direction even out-moved the real key (|−0.227| vs +0.214). This is exactly what
-   the subspace mechanism predicts — and it is the stronger paper. Full account:
+   random direction even out-moved the real key (|−0.227| vs +0.214). Full account:
    `results.md` **M12**.
-   ⚠️ **The dose verdict itself carried two defects (now fixed).** Its empirical test
+   **On Arousal the same protocol PASSES.** Identical model, layer, prompts and ladder
+   (grouped **0.84**, audit **100%**, dose **17.7%**): real slope **+0.831 ± 0.092** vs
+   **25** random directions (mean +0.037, sd 0.281, range [−0.411, +0.697]) → **z = +2.83**,
+   **0/25** reach it (add-one **p = 0.038**, at the floor), monotone dose–response
+   (−0.425 → +0.376 → +0.406 → +0.780 → +0.977) → **SEPARABLE on both tests**. So the
+   steerer result is **axis-dependent**: the *more* readable axis is the inert one, and
+   the Arousal pass is the **positive control** that proves the Care/Harm null is not a
+   broken rig. Caveats: p sits at the n=25 floor, and the run is a deterministic
+   *extension* of the n=15 run (same seeds) — `MESE_SEED=1` gives an independent
+   replication. Full account: `results.md` **M13(d)**; transcript:
+   `results_step8_arousal_n25.txt`.
+   ⚠️ **The dose verdict carried two defects (now fixed).** Its empirical test
    required `p < 0.05`, but the add-one estimator floors at `1/(n+1)` — so at
    `MESE_SHAM=15` the test was **unsatisfiable** and no outcome could pass it; a clean
    0-of-15 separation would have been misreported as a null. The verdict now prints the
    floor and returns `CANDIDATE` when the design cannot reach 0.05 — use
    **`MESE_SHAM>=20`** for a decisive test. Separately, the fluency label counted a
    fluency *improvement* as "MODEL DEGRADING". Neither defect changes the Care/Harm null
-   (its `z=+1.08` fails on `|z|`, not on the floor), but the **Arousal** run's transcript
-   was never persisted, so that axis remains open. Full account: `results.md` **M13**.
+   (its `z=+1.08` fails on `|z|`, not on the floor); the Arousal n=25 run above was made
+   under the corrected rule. Full account: `results.md` **M13**.
 4. **The collapse is contingent, not tautological — which is what makes it a finding.**
    On a synthetic *nonlinear* boundary the probe key points well away from `mean`
    (measured cos **0.39**) while still lying inside `rowspace(W₁)`. So the subspace theorem

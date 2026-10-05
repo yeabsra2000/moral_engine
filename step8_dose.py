@@ -31,8 +31,13 @@ Everything is configurable so the same script can be re-run as a confirmation
 without editing code:
 
     python step8_dose.py                           # default axis = Care/Harm
-    MESE_AXIS=Arousal MESE_SHAM=15 python step8_dose.py
+    MESE_AXIS=Arousal MESE_SHAM=25 python step8_dose.py
     MESE_SCALES=0,10,50,100,200 python step8_dose.py
+    MESE_SEED=1 python step8_dose.py   # INDEPENDENT replication: fresh generation
+                                       # streams (default 0 reproduces the logged
+                                       # runs byte-for-byte -- a re-run with the
+                                       # same MESE_SEED is an EXTENSION, not a
+                                       # replication; see results.md M13d)
     MESE_DRY=1 python step8_dose.py     # CPU wiring check, meaningless numbers
 
 The DEFAULT AXIS IS Care/Harm. The steering verdict must be read off the most
@@ -110,6 +115,11 @@ GATE_HIDDEN = int(os.environ.get("MESE_GATE_HIDDEN", "64"))
 GATE_REPS = int(os.environ.get("MESE_GATE_REPS", "10"))
 # Fluency drop from the scale-0 baseline that we call "the model is broken".
 BREAK_FL = 0.20
+# Replication key (default 0 = exactly the streams the logged runs used).
+# A re-run with the same MESE_SEED reproduces every generation byte-for-byte --
+# great for EXTENDING the sham count, but it is not an independent replication.
+# Set MESE_SEED=1 (or any new value) for fresh streams; the run header prints it.
+SEED_REP = os.environ.get("MESE_SEED", "0")
 
 LOG = os.environ.get("MESE_LOG", "results_step8_dose_dry.txt" if DRY
                      else "results_step8_dose.txt")
@@ -129,7 +139,7 @@ _log.write(f"\n===== step8 dose run {datetime.datetime.now():%Y-%m-%d %H:%M:%S} 
            f"axis={AXIS} dry={DRY} =====\n")
 sys.stdout = _Tee(sys.__stdout__, _log)
 print(f"[log] writing to {LOG}  |  axis={AXIS} scales={SCALES} "
-      f"directions={DIRECTIONS} samples={SAMPLES} dry={DRY}")
+      f"directions={DIRECTIONS} samples={SAMPLES} dry={DRY} seed_rep={SEED_REP}")
 
 torch.manual_seed(0); random.seed(0)
 if DRY:
@@ -222,8 +232,14 @@ def seed_cell(direction):
       2. it seeded from `hash(str)`, which Python 3 randomizes PER PROCESS, so even
          the per-direction seed was not reproducible between runs.
     Now: deterministic via stable_seed, and identical across the scale ladder.
+    MESE_SEED (default 0) additionally re-keys EVERY cell's stream (real and sham)
+    so a genuinely independent replication can be requested without editing code.
+    With the default, this function reproduces the logged runs exactly -- which
+    means a plain re-run EXTENDS the sham count but does not replicate the
+    generations (that is how the n=25 Arousal run reproduced the n=15 one).
     """
-    s = stable_seed(AXIS, direction)
+    s = (stable_seed(AXIS, direction) if SEED_REP == "0"
+         else stable_seed(AXIS, direction, f"rep{SEED_REP}"))
     torch.manual_seed(s); random.seed(s)
 
 
