@@ -1,0 +1,13 @@
+  1 | ===== step8 dose run PENDING — Arousal, n=25 shams =====
+  2 | STATUS: NOT YET RUN. This file is a placeholder so the artifact cannot be
+  3 |         lost again (the n=15 Arousal transcript was never persisted —
+  4 |         results.md M13).
+  5 | Command:  !MESE_AXIS=Arousal MESE_SHAM=25 python step8_dose.py
+  6 | (n>=20 makes the add-one empirical test satisfiable: floor = 1/(n+1) < 0.05.
+  7 |  Rename results_step8_dose.txt first if a log from another axis exists —
+  8 |  the log APPENDS.)
+  9 | After the run: paste the full transcript below this header, eliding only the
+ 10 | HuggingFace download-progress lines, and update results.md M13 / paper.md.
+ 11 |
+ 12 | PASTE TRANSCRIPT BELOW THIS LINE:
+ 13 | 

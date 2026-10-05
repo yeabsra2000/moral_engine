@@ -56,6 +56,15 @@ artifacts, and the repo now refuses to report them.
    random direction even out-moved the real key (|−0.227| vs +0.214). This is exactly what
    the subspace mechanism predicts — and it is the stronger paper. Full account:
    `results.md` **M12**.
+   ⚠️ **The dose verdict itself carried two defects (now fixed).** Its empirical test
+   required `p < 0.05`, but the add-one estimator floors at `1/(n+1)` — so at
+   `MESE_SHAM=15` the test was **unsatisfiable** and no outcome could pass it; a clean
+   0-of-15 separation would have been misreported as a null. The verdict now prints the
+   floor and returns `CANDIDATE` when the design cannot reach 0.05 — use
+   **`MESE_SHAM>=20`** for a decisive test. Separately, the fluency label counted a
+   fluency *improvement* as "MODEL DEGRADING". Neither defect changes the Care/Harm null
+   (its `z=+1.08` fails on `|z|`, not on the floor), but the **Arousal** run's transcript
+   was never persisted, so that axis remains open. Full account: `results.md` **M13**.
 4. **The collapse is contingent, not tautological — which is what makes it a finding.**
    On a synthetic *nonlinear* boundary the probe key points well away from `mean`
    (measured cos **0.39**) while still lying inside `rowspace(W₁)`. So the subspace theorem
@@ -188,6 +197,9 @@ Setup: `Runtime → Change runtime type → T4 GPU`, then run these cells:
 
 # 7c) DOSE run — was the Step 6 null real, or just under-scaled? THIS is the
 #     decisive steering experiment (~15 min at MESE_SHAM=6, ~60-75 min at 15).
+#     Use MESE_SHAM>=20 for a DECISIVE run: the add-one p floors at 1/(n+1), so
+#     below n=20 the empirical test cannot reach p<0.05 whatever the result is
+#     (results.md M13).
 #     It DEFAULTS to Care/Harm: the strongest-reading axis (template-grouped
 #     0.98 +- 0.00) and the only one whose instrument sits comfortably clear of
 #     the 0.60 gate. Valence reads 0.84 +- 0.17 — wide enough that a short run
@@ -198,8 +210,10 @@ Setup: `Runtime → Change runtime type → T4 GPU`, then run these cells:
 #     The script REFUSES to run unless the measuring probe clears a
 #     template-grouped held-out gate at the SAME protocol step5 reports
 #     (hidden=64, reps=10), so no verdict can rest on a weak instrument.
-#     A second axis, run identically, is the cheapest confirmation:
-# !MESE_AXIS=Arousal MESE_SHAM=15 python step8_dose.py
+#     A second axis, run identically, is the cheapest confirmation. Use n>=20:
+#     at n=15 the empirical test CANNOT reach p<0.05, so a real effect would be
+#     misread as a null (results.md M13).
+# !MESE_AXIS=Arousal MESE_SHAM=25 python step8_dose.py
 #     Rename the log between axes so the runs do not merge (it APPENDS):
 # !mv results_step8_dose.txt results_step8_care_n15.txt
 

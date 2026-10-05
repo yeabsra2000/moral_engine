@@ -415,9 +415,15 @@ for name in DIRECTIONS:
         RESULTS[name][scale] = (tone_m, flu_m, ts)
         base_f = RESULTS[name].get(0.0, (float('nan'), float('nan'), None))[1]
         d_flu = flu_m - base_f if base_f == base_f else float("nan")
+        # Sign matters for the LABEL. `abs()` treats a fluency IMPROVEMENT as
+        # "degrading", which is wrong (seen on Arousal scale 4: d_flu=+0.236 labelled
+        # "MODEL DEGRADING"). A large upward shift is still worth FLAGGING -- it can
+        # mean degenerate, repetitive text -- but it is not degradation.
         status = ""
-        if d_flu == d_flu and abs(d_flu) > BREAK_FL:
+        if d_flu == d_flu and d_flu < -BREAK_FL:
             status = "MODEL DEGRADING (too strong)"
+        elif d_flu == d_flu and d_flu > BREAK_FL:
+            status = "fluency shifted UP (check for loops)"
         print(f"{scale:>7g} {tone_m:>+8.3f} {flu_m:>9.3f} {d_flu:>8.3f}  {status}")
 
 n_steered, n_gen = STEER.check()
@@ -512,6 +518,10 @@ for name in DIRECTIONS:
         continue
     # Restrict to the fluency-INTACT window: a slope measured where the model is
     # already degrading measures breakage, not steering.
+    # NOTE: this window uses |shift| on purpose -- a large UPWARD shift is also
+    # disqualifying, because degenerate repetitive text scores high mean log-prob.
+    # The per-scale LABEL above is sign-aware; the window stays deliberately
+    # conservative so a favourable scale cannot be admitted by cherry-picking.
     safe = [s for s in SCALES if s == 0.0 or abs(r[s][1] - base[1]) <= BREAK_FL]
     hi = max(safe) if safe else None
     mag, se, at = paired_slope(r, hi)
@@ -556,17 +566,29 @@ if N_SHAM > 1:
         print(f"  range: [{min(slopes):+.3f}, {max(slopes):+.3f}]")
         if sd > 1e-9:
             z = (real_m - mu) / sd
-            # BOTH tests, because with n=6 the parametric z is optimistic. The
+            # BOTH tests, because with a small n the parametric z is optimistic. The
             # empirical test asks the question that actually matters -- how often does
             # a RANDOM direction beat the real key -- and needs no distributional
             # assumption. Report both; if they disagree, quote the weaker one.
             n_ge = sum(1 for v in slopes if v >= real_m)
             p_emp = (1 + n_ge) / (1 + len(slopes))     # add-one, never claims p=0
+            # The add-one estimator CANNOT fall below 1/(n+1), so `p < 0.05` is
+            # UNSATISFIABLE for n <= 19 however clean the separation is. A test that
+            # cannot be passed is not a negative result. This really happened: Arousal
+            # gave 0/15 (z=+2.64, p=0.062) and was reported NOT SEPARABLE because the
+            # threshold was unmet -- but 0.062 is the FLOOR at n=15, so no outcome
+            # could have passed. Name the floor and the n required, and treat a
+            # floor-level 0-of-n as a candidate rather than a null.
+            p_floor = 1.0 / (1 + len(slopes))
+            n_needed = min(n for n in range(1, 500) if 1.0 / (1 + n) < 0.05)
             print(f"\n  real `mean` key: {real_m:+.3f} +/- {real_se:.3f} "
                   f"->  z vs sham dist = {z:+.2f}")
             print(f"  empirical: {n_ge}/{len(slopes)} sham directions reach it "
-                  f"(add-one p = {p_emp:.3f})")
-            _sig = min(abs(z) >= 2.0, p_emp < 0.05)
+                  f"(add-one p = {p_emp:.3f}; floor at this n = {p_floor:.3f})")
+            z_ok = abs(z) >= 2.0
+            p_ok = p_emp < 0.05
+            design_capped = (not p_ok) and (n_ge == 0) and (p_floor >= 0.05)
+            _sig = bool(z_ok and p_ok)
             # A z-test only means something if the instrument can actually measure
             # the thing. With degenerate grouping the probe cannot be certified, so
             # a "significant" tone shift may be template memorization inside the
@@ -579,19 +601,31 @@ if N_SHAM > 1:
                 print("           may be template memorization rather than a real change.")
                 print("           Fix dataset grouping before this means anything.")
                 _sig = False
-            elif not _sig:
+            elif design_capped:
+                print("\n  VERDICT: CANDIDATE -- NOT RESOLVED AT THIS SHAM COUNT.")
+                print(f"           The real key beats EVERY sham ({n_ge}/{len(slopes)} reach")
+                print(f"           it) and z={z:+.2f} clears 2, but with only {len(slopes)}")
+                print(f"           shams the smallest possible add-one p is {p_floor:.3f},")
+                print("           so `p < 0.05` CANNOT be met by ANY result at this n.")
+                print("           That is a limit of the DESIGN, not evidence of a null.")
+                print(f"           Re-run with MESE_SHAM={n_needed}+ to make the test")
+                print("           satisfiable. Also check the dose-response is monotone")
+                print("           AND that no single sham reproduces its shape.")
+            elif not z_ok:
                 print("\n  VERDICT: NOT SEPARABLE from random directions.")
-                print("           The two tests disagree or are both marginal, so this")
-                print("           is a PRELIMINARY candidate effect at best. Treat as")
-                print("           underpowered -- NOT as a steering result, and NOT as")
-                print("           evidence that the model cannot be steered.")
-                print("           Confirm with more shams (MESE_SHAM=15) and a second")
-                print("           axis before writing it up.")
+                print(f"           z={z:+.2f} < 2 against the sham distribution: random")
+                print("           directions reach this size routinely. A null at this")
+                print("           dose -- not a steering result.")
+            elif not p_ok:
+                print("\n  VERDICT: NOT SEPARABLE from random directions.")
+                print(f"           z={z:+.2f} clears 2, but {n_ge}/{len(slopes)} shams reach")
+                print("           the real slope too, so the effect is not specific to")
+                print("           the key. A null at this dose.")
             else:
                 print("\n  VERDICT: separable from the sham distribution on BOTH tests.")
-                print("           Promising -- but n=6 shams is a thin null. Re-run to")
-                print("           confirm, and check the dose-response is monotone")
-                print("           before writing it up.")
+                print(f"           z={z:+.2f} and only {n_ge}/{len(slopes)} shams reach it.")
+                print("           Promising -- confirm it replicates, that no single sham")
+                print("           reproduces its shape, and that it is monotone in dose.")
     print(f"\n[steering audit incl. shams] {n_steered2}/{n_gen2} hook LIVE "
           f"({STEER.n_should_steer} should have been).")
 print()
@@ -602,3 +636,5 @@ print("                                       mis-scaled, not a null.")
 print("  * no tone shift, and the sham is the same size -> likely a null, but only")
 print("    meaningful if the [dose] percentages reached a level where fluency was at")
 print("    risk. A sub-5% dose cannot support a no-effect claim.")
+print("  * `p < 0.05` needs n >= 20 shams. The add-one p floors at 1/(n+1), so at n=15")
+print("    the test is UNSATISFIABLE: a clean 0-of-15 is a CANDIDATE, never a null.")

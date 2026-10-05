@@ -575,6 +575,15 @@ controls, however, have not been re-run**, so the last-token > mean contrast rem
 - **Next:** (1) ✅ observer grid; (2) ✅ probe-gradient key + its two non-point repairs,
   ✅ layer sweep + last-token protocol — scripts in place, **results withdrawn pending
   re-run**; (3) ✅ sham-distribution protocol (`MESE_SHAM=n`) implemented;
+  (3b) ✅ **dose-verdict decision rule corrected** (`results.md` M13). The empirical test's
+  add-one floor is `1/(n+1)`, so `p < 0.05` was *unattainable* below n=20 and a clean
+  0-of-15 separation would have been reported as a null; the verdict now prints the floor
+  and returns `CANDIDATE` instead, and the per-scale fluency label is sign-aware (an
+  *improvement* was reading as "MODEL DEGRADING"). 🔴 The **Arousal** dose run's
+  transcript was never persisted, so it is not yet a result — re-run
+  `MESE_AXIS=Arousal MESE_SHAM=25 python step8_dose.py` and save
+  `results_step8_arousal_n25.txt`. Until that lands, the dose null holds **on Care/Harm
+  only** and the paper cannot claim it generalizes across axes;
   (4) 🔴 **RE-RUN step6 and step7 with the fix**, checking that each prints
   `[steering audit] N/N` — this is the blocking step, and everything else waits on it;
   (5) **the scale rung**: 3B/8B, matched relative depth, unquantized — the experiment

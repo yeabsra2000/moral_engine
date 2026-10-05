@@ -455,5 +455,65 @@ check("sham sloped, not just generated",
 print("       -> the real key is compared against a NULL DISTRIBUTION of slopes,")
 print("          which is the only comparison a no-effect claim can rest on.")
 
+# ---- scenario H: an UNSATISFIABLE significance threshold ---------------------
+# step8's verdict required `p_emp < 0.05`, but p_emp is the add-one estimator
+# (1 + n_ge) / (1 + n), whose FLOOR is 1/(n+1). At n=15 that floor is 0.0625, so NO
+# outcome could ever satisfy the test -- a clean 0-of-15 separation (Arousal, z=+2.64)
+# was reported "NOT SEPARABLE" purely because the threshold was unreachable. Same
+# family as every other bug in this file: a check that READS as strict while being
+# impossible to pass. The verdict now names the floor and says how many shams it needs.
+print("--- H. the empirical p-threshold must be REACHABLE ---")
+
+
+def _p_floor(n_sham):
+    """Smallest add-one p achievable with n shams (when 0 of them reach the key)."""
+    return 1.0 / (1 + n_sham)
+
+
+def _verdict(real_m, slopes, z_thresh=2.0, p_thresh=0.05):
+    """Replicates step8's decision rule, INCLUDING the design-cap branch."""
+    import statistics
+    n = len(slopes)
+    mu, sd = statistics.mean(slopes), statistics.stdev(slopes)
+    z = (real_m - mu) / sd
+    n_ge = sum(1 for v in slopes if v >= real_m)
+    p_emp, p_floor = (1 + n_ge) / (1 + n), _p_floor(n)
+    z_ok, p_ok = abs(z) >= z_thresh, p_emp < p_thresh
+    if (not p_ok) and n_ge == 0 and p_floor >= p_thresh:
+        return "CANDIDATE", z, p_emp, p_floor      # design-limited, NOT a null
+    if z_ok and p_ok:
+        return "SEPARABLE", z, p_emp, p_floor
+    return "NULL", z, p_emp, p_floor
+
+
+check("p-floor at n=15 is ABOVE 0.05 (test UNPASSABLE)",
+      float(_p_floor(15) >= 0.05), 1.0, 1.001)
+check("p-floor at n=20 is BELOW 0.05 (test becomes passable)",
+      float(_p_floor(20) < 0.05), 1.0, 1.001)
+
+# Replay the actual Arousal run: 15 sham slopes at its verdict scale (from the log).
+_ar_sham = [0.003, 0.227, -0.012, 0.056, 0.254, 0.208, 0.459, -0.121, 0.009,
+            0.045, 0.697, -0.253, -0.058, 0.550, -0.027]
+_v, _z, _p, _pf = _verdict(0.831, _ar_sham)
+check("Arousal (0/15, z~2.64) reads CANDIDATE, not NULL",
+      float(_v == "CANDIDATE"), 1.0, 1.001)
+print(f"       (replay: z={_z:+.2f}, p={_p:.3f} at floor {_pf:.3f} -> '{_v}')")
+
+# And the genuine null must STILL read null: Care/Harm scale 4, where exactly 2 of
+# the 15 shams reach the real slope. These are slopes (tone@4 - tone@0), read off the
+# log -- using the raw tone values here would replay the wrong number (z=+1.25 vs the
+# true +1.08), which is how this check was first written.
+_ch_sham = [0.007, -0.188, -0.062, -0.153, -0.016, -0.019, 0.126, 0.343, 0.275,
+            -0.483, -0.081, -0.284, 0.063, 0.053, -0.690]
+_v2, _z2, _p2, _ = _verdict(0.214, _ch_sham)
+check("Care/Harm (2/15, z~1.08) still reads NULL",
+      float(_v2 == "NULL"), 1.0, 1.001)
+print(f"       (replay: z={_z2:+.2f}, p={_p2:.3f} -> '{_v2}'; matches the logged +1.08)")
+
+# 25 shams make the same separation formally significant: 0/25 -> p = 1/26 = 0.038.
+_many = [(-1) ** i * (0.10 + 0.01 * i) for i in range(25)]
+check("hypothetical 0/25 shams reads SEPARABLE (test satisfiable)",
+      float(_verdict(0.831, _many)[0] == "SEPARABLE"), 1.0, 1.001)
+
 print("RESULT:", "ALL PASS" if not fails else f"FAILED: {fails}")
 raise SystemExit(1 if fails else 0)

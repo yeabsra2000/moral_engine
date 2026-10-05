@@ -778,9 +778,102 @@ This is NOT a claim that the model cannot be steered. It is a claim that *this k
 adds nothing over a random direction of the same size — which is exactly what the
 `rowspace(W₁)` mechanism (M8) predicts. The earlier suggestive Valence `+0.722` at
 scale 10 did not merely fail to replicate here: on Care/Harm at scale 10 the real key's
-slope is **negative**. Pending confirmation: a second axis (Arousal) run identically.
+slope is **negative**. The second axis (Arousal) was run identically — see **M13**, where
+that verdict turned out to rest on an unsatisfiable significance threshold and its
+transcript was not persisted. The Arousal question is still open; the Care/Harm null
+above does not depend on it.
+
+## M13 — Two decision-rule defects in the dose verdict, and an UNPERSISTED Arousal run  🔴 CODE FIXED / 🔴 ARTIFACT MISSING
+
+Found while reading the Arousal dose run. Both defects are in `step8_dose.py`, and both
+are the family this repo keeps hitting: a check that *reads* as strict while being either
+impossible to pass, or actively mislabelling what it saw.
+
+### (a) The empirical test was UNSATISFIABLE at `MESE_SHAM=15`  ❌→✅
+`p_emp` is the add-one estimator `(1 + n_ge) / (1 + n)`, so its **floor is `1/(n+1)`**.
+At n=15 that floor is **0.0625 > 0.05**, so the gate
+
+```
+_sig = min(abs(z) >= 2.0, p_emp < 0.05)
+```
+
+could not be satisfied by *any* outcome — a clean 0-of-15 separation included. The
+threshold was **unreachable, not unmet**, so the verdict it produced was not a null
+result. `p < 0.05` first becomes attainable at **n = 20**.
+
+Fix: the script now prints the floor next to `p_emp`, and when the real key beats *every*
+sham while the design cannot reach 0.05 it reports
+
+```
+VERDICT: CANDIDATE -- NOT RESOLVED AT THIS SHAM COUNT.
+```
+
+naming the floor and the n required, instead of `NOT SEPARABLE`. A genuine null still
+reports `NOT SEPARABLE` — the branch split is guarded by **scenario H** of
+`test_steering_collapse.py`, which replays both logged runs (Care/Harm reproduces
+`z=+1.08, p=0.188` → NULL; Arousal reproduces `z=+2.64, p=0.062` → CANDIDATE).
+
+### (b) A fluency IMPROVEMENT was labelled "MODEL DEGRADING"  ❌→✅
+The per-scale status used `abs(d_flu) > BREAK_FL`, so an upward fluency shift was
+labelled degradation. The label is now sign-aware — `d_flu < -BREAK_FL` → `MODEL
+DEGRADING`, `d_flu > +BREAK_FL` → `fluency shifted UP (check for loops)`. The *window*
+still uses `|d_flu|` **deliberately** (degenerate repetitive text scores high mean
+log-prob), so a favourable scale cannot be admitted by cherry-picking; that choice is now
+commented in the source.
+
+### (c) The Arousal transcript was never persisted  🔴
+An Arousal dose run was executed and read during this session, but **no transcript
+reached the repo**: there is no `results_step8_arousal_n15.txt`, and
+`results_step8_dose.txt` is a **0-byte** file. The numbers below are therefore a
+**working observation, NOT a recorded result**, and must not be cited until re-run.
+
+| quantity (Arousal, n=15, layer 14) | value |
+|---|---|
+| real `mean` key at scales 0/4/10/25/50 | −0.425, +0.376, +0.406, +0.780, +0.977 (monotone ↑) |
+| gate (template-grouped held-out) | 0.84 ± 0.07 → passes the 0.6 gate |
+| `cos(mean, random)` | 0.028 |
+| steering audit | 2040/2550 hook LIVE |
+| real slope at its pinned scale (10) | **+0.831 ± 0.092** |
+| sham distribution (n=15) | mean **+0.136**, sd **0.263**, range [−0.253, +0.697] |
+| real vs sham | z = **+2.64**; **0/15** reach it; add-one **p = 0.062** (i.e. the floor) |
+
+Two things follow, and they point opposite ways:
+
+- **It looks like a direction-specific effect.** Monotone in dose, larger than on
+  Care/Harm, and in the intended direction (arousal-increasing). Under the old code it
+  was suppressed by the unreachable threshold — defect (a).
+- **But one sham reproduces its shape.** Sham 13 rises monotonically from −0.807 to
+  +0.513, a total swing of **+1.32** against the real key's **+1.40**, reaching +0.550 at
+  the pinned scale. Monotonicity alone is therefore *not* specific to the key, and the
+  separation at the pinned scale is real but modest (+0.831 vs the best sham's +0.697).
+
+So this is a **candidate, not a confirmation** — exactly what the corrected verdict prints.
+
+### The one run that settles it
+```
+MESE_AXIS=Arousal MESE_SHAM=25 python step8_dose.py   # n=25 -> p-floor = 1/26 = 0.038 < 0.05
+```
+n ≥ 20 makes `p < 0.05` attainable. If the real key still beats every sham at n=25 the
+test passes on both criteria and the Arousal effect is recorded; if shams start reaching
+it, it is a null and the Care/Harm null generalizes. **Either way the transcript must be
+pasted into `results_step8_arousal_n25.txt`** with the provenance header used by
+`results_step8_care_n15.txt` — an unpersisted run is not a result.
+
+### Consequence for the paper
+Not yet a rewrite. The Care/Harm null (M12) is **unaffected**: its `z=+1.08` fails on
+`|z|`, not on the floor, so it is a genuine null under the corrected rule (replay-verified
+in scenario H). But the Arousal branch means the paper **cannot yet claim the null
+generalizes across axes** — that claim now depends on the n=25 run.
 
 ## TODO (before the final table in the paper)
+- 🔴 **BLOCKING — RE-RUN THE AROUSAL DOSE (M13c).** The Arousal run's transcript was
+  never persisted, and its verdict was produced by a threshold no result could satisfy:
+  ```
+  MESE_AXIS=Arousal MESE_SHAM=25 python step8_dose.py   # n>=20 makes p<0.05 attainable
+  ```
+  Paste the output into `results_step8_arousal_n25.txt` (provenance header as in
+  `results_step8_care_n15.txt`). Until then the paper cannot claim the null generalizes
+  across axes. Do **not** cite the n=15 Arousal numbers as a result.
 - 🔴 **BLOCKING — RE-RUN THE STEERER (M9).** The Step 6 and Step 7 steering numbers
   were produced by a loop that steered only 1 generation in 20, so they are not
   evidence of anything. `SteerController` now arms per generation and prints a
