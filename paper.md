@@ -1,5 +1,5 @@
 # Probe-Derived Steering Keys Are Confined to the Probe's Own Row Space
-### A mechanism-first study of observer probes and activation steering across four ethical/affective axes — and an axis-dependent steering result at 1.5B (null on Care/Harm, pass on Arousal)
+### A mechanism-first study of observer probes and activation steering across four ethical/affective axes — and a seed-inconsistent steering result at 1.5B (null on Care/Harm; Arousal passes 1 of 2 independent seeds)
 
 **Working title (short):** *MESE-CR: Concept Probes + Activation Steering for Moral-Emotional Control in Small LLMs*
 
@@ -23,10 +23,18 @@
 >
 > **Update (2026-10-05) — the measurement now exists.** The replacement protocol
 > (`step8_dose.py`) audits every generation, gates the instrument, and scores each real
-> key against a *distribution* of sham directions at a calibrated dose. Its verdict is
-> **axis-dependent**: a clean null on Care/Harm (M12) and a separation on Arousal
-> (M13d, z = +2.83, 0/25 shams, monotone dose–response). Both verdicts are reported
-> below; the step6/step7 key-grid slopes remain withdrawn until re-run.
+> key against a *distribution* of sham directions at a calibrated dose. Its first verdict
+> was **axis-dependent**: a clean null on Care/Harm (M12) and a separation on Arousal
+> (M13d, z = +2.83, 0/25 shams, monotone dose–response).
+>
+> **Update (2026-10-07) — the Arousal pass did not replicate.** An independent
+> replication with fresh generation streams (`MESE_SEED=1`, M14) returns
+> **z = +1.57, 1/25 shams, p = 0.077 — NOT SEPARABLE** on the identical protocol, with
+> the effect estimate nearly halving (+0.831 → +0.367). The steerer result is therefore
+> reported as **seed-inconsistent (1 of 2 seeds pass)**: Care/Harm's null stands; Arousal
+> steering is a *candidate*, and the "positive control for the Care/Harm null" reading of
+> the seed0 pass is withdrawn. The step6/step7 key-grid slopes remain withdrawn until
+> re-run.
 
 ---
 
@@ -37,7 +45,8 @@ activations, and a growing literature both *reads* that information with probes 
 the reading result. What this paper actually contributes is a **mechanism that
 constrains where any probe-derived steering key can point** — proved and machine-checked
 offline — plus an audited, sham-controlled measurement of whether those keys steer at
-this scale: **they do on Arousal and they do not on Care/Harm**.
+this scale: **they do not on Care/Harm, and on Arousal they do on one seed of
+two** — an independent replication failed to reproduce the pass.
 
 The central result is a mechanism, verified without a model. For any two-layer probe
 `f(x) = W₂·SiLU(W₁x + b₁) + b₂`, the input gradient is
@@ -54,10 +63,11 @@ consequence is a *bound on the method*, not yet a measured null: a probe that ca
 a nonlinear boundary (grouped MLP 0.78–0.98 vs grouped linear 0.46–0.66) derives all of
 its keys from a subspace fixed by its own readout — so any steering it suggests is
 confined to directions the readout never needed, and cannot test the nonlinear structure
-that made the axis readable. Whether that confinement *is* what defeats steering turns
-out to be **axis-dependent** — on the two axes we dose-tested with an audited loop, the
-same mean-difference key separates from 25 sham directions on Arousal but not from 15 on
-Care/Harm (see the revision note and `results.md` M12–M13).
+that made the axis readable. Whether that confinement *is* what defeats steering remains
+**seed-inconsistent**: with an audited loop the mean-difference key fails to separate
+from a sham distribution on Care/Harm (M12: z = +1.08, 2/15) and separates on Arousal on
+one seed only — the independent replication misses both thresholds (M13d: z = +2.83,
+0/25, SEPARABLE; M14: z = +1.57, 1/25, NOT SEPARABLE; see the revision note).
 
 We are careful to separate two claims that are easy to conflate. The subspace theorem
 explains why the probe keys coincide with *each other*. That they also coincide with

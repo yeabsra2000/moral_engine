@@ -45,7 +45,8 @@ artifacts, and the repo now refuses to report them.
    and audits itself (`SteerController`, `[steering audit] N/N` on every run); **re-run
    step6/step7 on GPU before citing any *step6/step7* steering number** — the audited `step8_dose.py` runs are citable as they stand. Full account: `results.md` M9.
 
-   **The replacement experiment is in, and the verdict is axis-dependent.**
+   **The replacement experiment is in: a null on Care/Harm, and a seed-inconsistent
+   pass on Arousal (1 of 2 independent seeds).**
    `step8_dose.py` on **Care/Harm** — the best-reading axis (grouped **0.98**) — with the hook auditing
    **100%** and a **7.08%** dose of `||h||`, gives a real-key paired tone slope of
    **+0.214 ± 0.071** against a distribution of **15 random directions** (mean −0.074,
@@ -55,17 +56,23 @@ artifacts, and the repo now refuses to report them.
    dose–response is non-monotone (+0.21, −0.29, −0.07, +0.19 at scales 4/10/25/50). A
    random direction even out-moved the real key (|−0.227| vs +0.214). Full account:
    `results.md` **M12**.
-   **On Arousal the same protocol PASSES.** Identical model, layer, prompts and ladder
-   (grouped **0.84**, audit **100%**, dose **17.7%**): real slope **+0.831 ± 0.092** vs
-   **25** random directions (mean +0.037, sd 0.281, range [−0.411, +0.697]) → **z = +2.83**,
-   **0/25** reach it (add-one **p = 0.038**, at the floor), monotone dose–response
-   (−0.425 → +0.376 → +0.406 → +0.780 → +0.977) → **SEPARABLE on both tests**. So the
-   steerer result is **axis-dependent**: the *more* readable axis is the inert one, and
-   the Arousal pass is the **positive control** that proves the Care/Harm null is not a
-   broken rig. Caveats: p sits at the n=25 floor, and the run is a deterministic
-   *extension* of the n=15 run (same seeds) — `MESE_SEED=1` gives an independent
-   replication. Full account: `results.md` **M13(d)**; transcript:
-   `results_step8_arousal_n25.txt`.
+   **On Arousal the seed0 run PASSES — and the independent replication does NOT.**
+   Identical model, layer, prompts and ladder (grouped **0.84**, audit **100%**, dose
+   **17.7%**): seed0 gives real slope **+0.831 ± 0.092** vs **25** random directions
+   (mean +0.037, sd 0.281, range [−0.411, +0.697]) → **z = +2.83**, **0/25** reach it
+   (add-one **p = 0.038**, at the floor), monotone dose–response
+   (−0.425 → +0.376 → +0.406 → +0.780 → +0.977) → **SEPARABLE on both tests**. But
+   `MESE_SEED=1` re-keys every generation stream — a genuinely independent replication,
+   not a re-run of the same draws — and returns **+0.367 ± 0.151**, sham mean −0.008
+   sd 0.238, range [−0.664, +0.470], **z = +1.57**, **1/25** shams reach it, **p = 0.077**
+   → **NOT SEPARABLE**. So Arousal steering is a **candidate, 1 of 2 seeds pass** —
+   not an established axis-dependent result, and the seed0 pass can no longer serve as a
+   *positive control* for the Care/Harm null (on the second seed the same rig detected
+   nothing). The effect estimate itself nearly halves between seeds (+0.831 → +0.367),
+   so two seeds cannot distinguish a true null from a real effect; a third
+   (`MESE_SEED=2`) would decide it. Full account: `results.md` **M13(d)** (seed0) and
+   **M14** (seed1); transcripts: `results_step8_arousal_n25.txt`,
+   `results_step8_arousal_seed1.txt`.
    ⚠️ **The dose verdict carried two defects (now fixed).** Its empirical test
    required `p < 0.05`, but the add-one estimator floors at `1/(n+1)` — so at
    `MESE_SHAM=15` the test was **unsatisfiable** and no outcome could pass it; a clean

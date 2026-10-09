@@ -892,24 +892,86 @@ doc is now a test failure, not a reviewer catch — the documentation side of th
 "reads as protective but is inert" class, closed by machine.
 
 ### Consequence for the paper
-The steerer result is now **axis-dependent, not a blanket null**: Care/Harm — the
+*(Downgraded by **M14** below: the seed1 replication did not reproduce this pass, so the
+positive-control and rank-inversion arguments that followed from it are withdrawn. What
+M13d establishes on its own is narrower — that the audited pipeline **can** return a pass
+on one seed, with a monotone ladder and a 100% audit; the claim it licenses is reported in
+M14, not here.)*
+
+The steerer result was reported as **axis-dependent, not a blanket null**: Care/Harm — the
 strongest-reading axis — does **not** separate (M12: z=+1.08, 2/15), while Arousal
-does (M13d: z=+2.83, 0/25). That is a stronger position than a uniform null, for two
-reasons:
+separated on seed0 (M13d: z=+2.83, 0/25). That was a stronger position than a uniform
+null, for two reasons — both now weakened by M14:
 
-- The Arousal pass is a **positive control for the Care/Harm null**: the same pipeline —
+- The Arousal pass was a **positive control for the Care/Harm null**: the same pipeline —
   same gate, audit, dose ladder and sham distribution — *does* detect steering when it
-  is there, so the Care/Harm null cannot be dismissed as a broken rig.
-- The ranks are **inverted**: the *more* readable axis (Care/Harm, 0.98) is the *less*
+  is there, so the Care/Harm null cannot be dismissed as a broken rig. **M14: the
+  control did not replicate (seed1 NOT SEPARABLE), so this argument no longer holds** —
+  the Care/Harm null now rests on its own controls alone.
+- The ranks looked **inverted**: the *more* readable axis (Care/Harm, 0.98) is the *less*
   steerable one, and the weaker instrument (Arousal, 0.84) is the steerable one.
-  Readability therefore does not even *order* steerability, let alone guarantee it.
+  **M14: with Arousal passing only 1 of 2 seeds, the inversion is unresolved** — only
+  the "most readable axis is inert" half survives.
 
-This is also consistent with Sun et al.'s Valence–Arousal steerability at 8–14B: the
-affective axis moves here too, at 1.5B, while our moral axis (Care/Harm) stays inert.
+Sun et al.'s Valence–Arousal steerability at 8–14B remains *consistent with* seed0's
+pass, but no longer corroborates it.
 The M8 `rowspace(W₁)` mechanism is untouched — it constrains where probe-derived keys
 can *point* (they cannot leave the readout's subspace, and the gradient keys collapse
 onto `mean`), not whether any single key moves tone; the confinement evidence stands
 on its own, geometry-only.
+
+## M14 — The Arousal pass does NOT replicate: 1 of 2 seeds pass  ✅ RUN PERSISTED (NOT SEPARABLE)
+
+Command: `MESE_AXIS=Arousal MESE_SHAM=25 MESE_SEED=1 python step8_dose.py` (Google Colab T4, committed `step8_dose.py` at 080f8bc) — transcript persisted as `results_step8_arousal_seed1.txt`. `MESE_SEED=1` re-keys every cell's generation stream through `stable_seed`, so this run shares **no generations and no shams** with the M13d seed0 run: a genuine independent replication, not the deterministic extension M13d flagged (and requested via `MESE_SEED=1`). Every statistic below was independently recomputed from the transcript's raw per-scale rows at persist time and matched the log exactly; `test_docs_match_transcripts.py` now re-derives this DECISION block mechanically as well.
+
+| quantity (Arousal, n=25, layer 14, `MESE_SEED=1`) | value |
+|---|---|
+| gate (template-grouped held-out) | **0.84** → passes 0.6 |
+| dose-phase / full-run hook audit | 240/300 and **3240/4050** LIVE (100%) |
+| real `mean` key tone ladder (0/4/10/25/50) | −0.716, −0.349, −0.011, +0.238, +1.000 — monotone ↑ |
+| real slope at the verdict scale (4) | **+0.367 ± 0.151** |
+| dose at the verdict scale (4) | **7.08%** of `‖h‖` |
+| sham distribution (n=25) | mean **−0.008**, sd **0.238**, range [−0.664, +0.470] |
+| real vs sham | z = **+1.57** (< 2 ✗); **1/25** reaches it; add-one **p = 0.077** |
+| verdict | **NOT SEPARABLE** — random directions reach this size routinely |
+
+Side by side with the seed0 run (M13d):
+
+| | seed0 (M13d) | seed1 (M14) |
+|---|---|---|
+| generation streams / shams | keyed 0 (the logged runs) | fresh streams — **disjoint** |
+| verdict scale (largest fluency-intact) | 10 (17.7% of `‖h‖`) | 4 (7.08% of `‖h‖`) |
+| real paired slope | **+0.831 ± 0.092** | **+0.367 ± 0.151** |
+| sham mean ± sd | +0.037 ± 0.281 | −0.008 ± 0.238 |
+| z vs sham distribution | **+2.83** ✓ | **+1.57** ✗ |
+| shams ≥ real key | 0/25 | 1/25 |
+| add-one p (floor 0.038) | 0.038 ✓ | 0.077 ✗ |
+| dose ladder | monotone ↑ | monotone ↑ |
+| hook audit | 100% | 100% |
+| verdict | **SEPARABLE** | **NOT SEPARABLE** |
+
+What the mismatch does and does not show:
+
+- **The apparatus is not what failed.** Both runs pass the instrument gate (0.84), audit 100% of generations, print the same dose ladder, and produce strictly monotone tone ladders. Every protective control reads identically in both; the difference sits in the size of the effect relative to the sham spread, not in any control.
+- **The effect estimate nearly halves between seeds.** +0.831 → +0.367 at the respective pinned scales; at the *matched* dose (scale 4) seed0's ladder gives a slope of **+0.801** against seed1's **+0.367** — a 2.2× change from generation sampling alone. seed1 also pinned at scale 4 instead of 10, because scales 10/25/50 breached the `|d_flu| ≤ 0.20` fluency window in this run (the M13b rule, applied as written) — so this run could not even reach the dose at which seed0 pinned.
+- **seed1 is not a clean refutation either.** The slope stays positive (+0.367 ± 0.151, ≈ 2.4× its own SE), the ladder stays monotone, and the real key beats 24 of 25 shams — it misses only the two hard criteria (`z ≥ 2`, `p < 0.05`). The one sham that clears it sits at +0.470; a second sham rounds to exactly +0.367 at transcript precision, so at 3 decimals the separation is effectively a tie (the logged full-precision count is 1). With two seeds the honest statement is **inconsistent, not refuted**: we cannot distinguish a true null from a real effect with this much seed variance.
+- One seed1-specific ladder caveat: at scale 50 the tone lands on exactly **+1.000**, the measuring probe's ceiling — that rung is saturated and degenerate. The verdict never used it (pinned at 4).
+
+### Consequence for the paper — supersedes M13d's "Consequence" block
+**Downgrade: Arousal steering is a CANDIDATE, not a confirmed pass. The steerer result is seed-inconsistent — 1 of 2 independent seeds pass.** Concretely:
+
+- The **Care/Harm null (M12) is unaffected** — it was one audited run and nothing here touches it. What dies is the *positive-control argument*: the Arousal pass can no longer vouch for the Care/Harm rig, because on the second seed the same rig detected nothing. The Care/Harm null now rests on its own audited controls (gate, 100% hook audit, sham distribution, non-monotone ladder) alone.
+- The **rank-inversion claim weakens.** "The more readable axis is the inert one" still holds (Care/Harm, grouped 0.98, fails on its seed), but the contrastive form — *readability does not even rank steerability* — needed Arousal established as steerable, which it no longer is. The paper must now report: one pass, one miss, **unresolved**.
+- The headline steerer claim reads **"1 of 2 independent seeds pass; Arousal steering is a candidate awaiting a third run"** — not "axis-dependent steering established" and not "positive control for the Care/Harm null". A third seed (`MESE_SEED=2`) is queued and decides it.
+- Untouched: the **M8 mechanism**, the **Observer grid**, and every other generation-free result — none of them ever depended on this.
+
+### Also in M14: the step6 re-run paste is TRUNCATED (audit unverified)
+`results_step6_fixed_partial.txt` records the M9-fixed step6 running on GPU (committed step6 at 080f8bc, `python step6_steer_all.py`) into the Valence and Arousal sections, then cut mid-Arousal. **Not present:** Care/Harm, Fairness, the summary tables, the dose report, and the end-of-run `[steering audit] N/N` line — step6 prints that line once, after all axes, so its absence is truncation rather than a failed audit, but it also means **the audit is UNVERIFIED**. The complete log still lives on the Colab instance as `results_step6.txt` and has not been recovered. Standing rules for this artifact:
+
+1. **step6 has no sham *distribution*** (a single `random` key), so by M13's rule **none of its slopes is steering evidence** either way — its noise-floor z tests against scale-0 sampling noise (sd ≈ 0.05), a far weaker null than step8's direction distribution (sd ≈ 0.24–0.28). Do not quote any step6 steering number until the tail is recovered and the audit line checked.
+2. What the partial *does* establish: the fixed loop ran end-to-end into Valence/Arousal, and the **Valence measuring-probe gate reads 0.72** under the fixed protocol — the axis that aborted step8 pre-M11 at 0.59 under the old `hidden=32` gate. The key-position cosines it prints (cos(logreg, mean) = +1.000, probe-grad ±0.982) match §4.0, as expected — those need no generation.
+3. Recover `results_step6.txt` from Colab (or re-run step6, ~20–40 min on T4) and check `[steering audit] N/N` before citing anything from this file.
+
 
 ## TODO (before the final table in the paper)
 - ✅ **DONE (M13d): the AROUSAL DOSE at n=25.** `MESE_AXIS=Arousal MESE_SHAM=25` ran

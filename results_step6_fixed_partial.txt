@@ -1,0 +1,85 @@
+===== step6 re-run under the M9-fixed loop - PARTIAL PASTE (truncated) =====
+Provenance: Google Colab (T4), running the committed step6_steer_all.py at 080f8bc.
+Command:    python step6_steer_all.py
+Status: TRUNCATED mid-Arousal (this paste ends after the Arousal probe-grad row).
+The run's own log tee wrote the complete output to results_step6.txt on the Colab
+instance; that file has NOT been recovered yet. NOT present here: Care/Harm,
+Fairness, the summary tables, the dose report, and the end-of-run
+"[steering audit] N/N" line (step6 prints it once, after all axes - so its absence
+is truncation, not a failed audit, but it also means the audit is UNVERIFIED).
+
+WHAT THIS PARTIAL IS NOT: step6 has no sham DISTRIBUTION (a single 'random' key), so
+by the rule fixed in results.md M13 none of its slopes is steering evidence either
+way. Its noise-floor z tests against scale-0 sampling noise (sd ~0.05), a far weaker
+null than step8's direction distribution (sd ~0.24-0.28); a real key clearing the
+former says nothing about clearing the latter. Do not quote a step6 steering number
+until the tail is recovered and the audit line checked.
+
+WHAT IT IS FOR: records that the M9-fixed loop ran on GPU end-to-end into the
+Valence/Arousal sections, and that the Valence measuring-probe gate reads 0.72 under
+the fixed protocol (Valence is the axis that aborted step8 pre-M11 at 0.59 under the
+old hidden=32 gate). Summary: results.md M14.
+CUDA: True
+[log] writing to results_step6.txt  |  QUICK=False DRY=False (prompts=5, samples=4, scales=[0.0, 1.5, 4.0, 10.0, 25.0], directions=['mean', 'logreg', 'lda', 'probe-grad', 'probe-grad-path', 'probe-grad-class', 'random'])
+Full run: ~20-40 min on a T4. QUICK run: ~4-6 min. Keep the browser tab open.
+[transformers] `torch_dtype` is deprecated! Use `dtype` instead!
+Loading weights: 100% 338/338 [00:00<00:00, 339.35it/s]
+model=Qwen/Qwen2.5-1.5B-Instruct  depth=28  steering layer=14
+==============================================================================
+Steering toward POSITIVE on all 4 axes @ layer 14. directions = ['mean', 'logreg', 'lda', 'probe-grad', 'probe-grad-path', 'probe-grad-class', 'random']
+tone in -1..1 (measured with the steer hook OFF); fluency = mean per-token logp.
+Measuring-probe gate: template-grouped held-out accuracy must be >= 0.6.
+==============================================================================
+
+### Valence: 176 sentences (88 pos / 88 neg), 32 groups
+    measuring probe held-out accuracy = 0.72   (gate 0.6)
+    (where each key POINTS: cos vs the mean key; +1.000 = same direction as the plain mean difference)
+      cos(          logreg, mean) = +1.000
+      cos(             lda, mean) = +0.731
+      cos(      probe-grad, mean) = +0.982
+      cos( probe-grad-path, mean) = +0.982
+      cos(probe-grad-class, mean) = +0.982
+      cos(          random, mean) = +0.021
+  [            mean] tone  0=-0.03  1.5=+0.05  4=+0.04  10=+0.20  25=+0.27   slope=+0.30
+                      fluency 0=-2.86  1.5=-2.78  4=-2.76  10=-2.66  25=-2.57
+  [          logreg] tone  0=-0.02  1.5=-0.02  4=+0.08  10=+0.06  25=+0.22   slope=+0.24
+                      fluency 0=-2.77  1.5=-2.98  4=-3.12  10=-2.83  25=-2.65
+  [             lda] tone  0=+0.05  1.5=+0.02  4=+0.07  10=+0.07  25=+0.25   slope=+0.20
+                      fluency 0=-2.52  1.5=-2.48  4=-2.35  10=-2.29  25=-2.79
+  [      probe-grad] tone  0=-0.03  1.5=-0.00  4=-0.01  10=+0.08  25=+0.17   slope=+0.19
+                      fluency 0=-2.06  1.5=-2.13  4=-2.21  10=-2.75  25=-2.27
+  [ probe-grad-path] tone  0=+0.08  1.5=+0.12  4=+0.12  10=+0.16  25=+0.17   slope=+0.08
+                      fluency 0=-2.89  1.5=-2.83  4=-2.85  10=-2.46  25=-2.64
+  [probe-grad-class] tone  0=+0.01  1.5=+0.13  4=-0.02  10=+0.01  25=+0.14   slope=+0.12
+                      fluency 0=-3.19  1.5=-2.88  4=-2.55  10=-2.22  25=-2.59
+  [          random] tone  0=+0.06  1.5=+0.06  4=+0.07  10=+0.04  25=-0.05   slope=-0.11
+                      fluency 0=-2.19  1.5=-2.19  4=-2.17  10=-2.13  25=-2.63
+    [noise floor] scale-0 replicates [-0.03, -0.02, 0.05, -0.03, 0.08, 0.01, 0.06]
+                  mean=+0.019 sd=0.046  se(slope)=0.065
+                  a pure-noise run peaks at ~2.4 z, so any |z| below
+                  that is indistinguishable from sampling noise:
+                    z(            mean) = 4.62   slope=+0.30  <-- above noise
+                    z(          logreg) = 3.64   slope=+0.24  <-- above noise
+                    z(             lda) = 3.14   slope=+0.20  <-- above noise
+                    z(      probe-grad) = 2.99   slope=+0.19  <-- above noise
+                    z( probe-grad-path) = 1.28   slope=+0.08
+                    z(probe-grad-class) = 1.86   slope=+0.12
+                    z(          random) = 1.63   slope=-0.11
+
+### Arousal: 136 sentences (68 pos / 68 neg), 28 groups
+    measuring probe held-out accuracy = 0.82   (gate 0.6)
+    (where each key POINTS: cos vs the mean key; +1.000 = same direction as the plain mean difference)
+      cos(          logreg, mean) = +1.000
+      cos(             lda, mean) = +0.704
+      cos(      probe-grad, mean) = +0.963
+      cos( probe-grad-path, mean) = +0.963
+      cos(probe-grad-class, mean) = +0.963
+      cos(          random, mean) = +0.030
+  [            mean] tone  0=-0.12  1.5=-0.01  4=-0.06  10=+0.10  25=+0.28   slope=+0.40
+                      fluency 0=-2.80  1.5=-2.66  4=-2.71  10=-2.85  25=-2.78
+  [          logreg] tone  0=-0.21  1.5=-0.21  4=-0.06  10=-0.08  25=+0.01   slope=+0.22
+                      fluency 0=-1.97  1.5=-1.99  4=-2.29  10=-2.55  25=-2.29
+  [             lda] tone  0=-0.28  1.5=-0.28  4=-0.28  10=-0.29  25=-0.13   slope=+0.15
+                      fluency 0=-2.29  1.5=-2.32  4=-2.29  10=-2.13  25=-2.50
+  [      probe-grad] tone  0=-0.01  1.5=-0.02  4=-0.04  10=-0.01  25=+0.34   slope=+0.35
+                      fluency 0=-2.59  1.5=-2.68  4=-2.96  10=-2.83  25=-2.82
