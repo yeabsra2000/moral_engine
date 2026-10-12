@@ -1,5 +1,9 @@
 # MESE-CR — reading and steering moral/emotional tone in a small LLM
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
+[![Tests](https://github.com/yeabsra2000/moral_engine/actions/workflows/tests.yml/badge.svg)](https://github.com/yeabsra2000/moral_engine/actions/workflows/tests.yml)
+
 Reading/writing moral–emotional tone from a small LLM's activations (Observer probe)
 and steering it (Steerer), on Qwen/Qwen2.5-1.5B-Instruct.
 
@@ -14,6 +18,63 @@ It is written as a sequence of *checks*, because the most useful thing this proj
 produced is methodological: several plausible ways to "find" tone here turn out to be
 artifacts, and the repo now refuses to report them.
 
+## Quick start
+
+```bash
+# 1. Install (CPU is enough for the mechanism tests)
+pip install -r requirements.txt
+
+# 2. Run the mechanism proof — no model needed
+python tests/test_steering_collapse.py        # ∇f ∈ rowspace(W₁) to machine precision
+python tests/test_probe_calibration.py        # linear probe is not merely undertrained
+python tests/test_grouped_cv.py               # grouped CV is the honest protocol
+
+# 3. Reading (needs the model)
+python step5_robust.py                  # grouped MLP 0.78–0.98 across layers
+
+# 4. Steering (needs GPU — the audited measurement)
+MESE_AXIS=Care/Harm MESE_SHAM=25 python step8_dose.py        # null on Care/Harm
+MESE_AXIS=Arousal MESE_SHAM=25 MESE_SEED=2 python step8_dose.py  # seed2 check
+```
+
+## Results
+
+| Axis | Grouped MLP (readability) | Audited steering verdict |
+|------|---------------------------|---------------------------|
+| Care/Harm | 0.98 | **NULL** (M12: z=+1.08, 2/15 shams) |
+| Arousal | 0.84 | **CANDIDATE** (M13d seed0 z=+2.83; M14 seed1 z=+1.57 — 1 of 2 seeds) |
+| Valence | 0.82 | pending GPU re-run |
+| Fairness | 0.79 | pending GPU re-run |
+
+## Status
+
+- ✅ Mechanism proved (CPU, machine-checked: `∇f(x) ∈ rowspace(W₁)`)
+- ✅ Reading reproduced (template-grouped CV, nonlinear: 0.78–0.98 MLP)
+- ✅ Care/Harm steering null (audited, well-controlled)
+- ⚠️ Arousal steering — candidate, 1 of 2 seeds pass (seed2 pending)
+- ⚠️ step6/step7 steering grid — **withdrawn** until GPU re-run (hook-dilution bug)
+
+## Documentation
+
+| File | What it contains |
+|------|-------------------|
+| [paper.md](paper.md) | Full working paper (mechanism, results, revision notes) |
+| [results.md](results.md) | M-numbers, decision rules, TODOs, full audit trail |
+| [LICENSE](LICENSE) | MIT License |
+| [CITATION.cff](CITATION.cff) | BibTeX/CFF citation metadata |
+
+## Citation
+
+```bibtex
+@software{yeabsra_moral_engine_2026,
+  author = {Yeabsra Kassahun},
+  title = {{MESE-CR: Probe-derived steering keys are confined to the probe's own row space}},
+  year = {2026},
+  url = {https://github.com/yeabsra2000/moral_engine},
+  license = {MIT}
+}
+```
+
 ## Findings
 
 1. **Mechanism: every probe-based steering key is confined to one subspace.** For a
@@ -22,11 +83,11 @@ artifacts, and the repo now refuses to report them.
    single point, along the μ⁻→μ⁺ path, or over the whole positive class — only rescales
    the per-unit gates and cannot change where the key points. Measured: the three gradient
    keys are mutually **cos 0.995–1.000**, and `cos(logreg, mean) = +1.000`, so `logreg`
-   is not an independent key either. `test_steering_collapse.py` confirms the containment
+   is not an independent key either. `tests/test_steering_collapse.py` confirms the containment
    to machine precision (residual **0.000000**) with no model at all.
 2. **Reading works, and the recoverable structure is nonlinear.** Template-grouped CV MLP
    accuracy is **0.78–0.98** across layers 12/14/16, while a grouped *linear* probe gets
-   **0.46–0.66** (Arousal and Fairness at chance). `test_probe_calibration.py` shows a
+   **0.46–0.66** (Arousal and Fairness at chance). `tests/test_probe_calibration.py` shows a
    synthetic set that is linearly separable *by construction* still earns only **0.75**
    under this protocol, so the linear probe is not merely undertrained. The axis is
    therefore nonlinear *and* readable — but the keys in (1) cannot reach it.
@@ -71,8 +132,8 @@ artifacts, and the repo now refuses to report them.
    nothing). The effect estimate itself nearly halves between seeds (+0.831 → +0.367),
    so two seeds cannot distinguish a true null from a real effect; a third
    (`MESE_SEED=2`) would decide it. Full account: `results.md` **M13(d)** (seed0) and
-   **M14** (seed1); transcripts: `results_step8_arousal_n25.txt`,
-   `results_step8_arousal_seed1.txt`.
+   **M14** (seed1); transcripts: `results/step8_arousal_n25.txt`,
+   `results/step8_arousal_seed1.txt`.
    ⚠️ **The dose verdict carried two defects (now fixed).** Its empirical test
    required `p < 0.05`, but the add-one estimator floors at `1/(n+1)` — so at
    `MESE_SHAM=15` the test was **unsatisfiable** and no outcome could pass it; a clean
@@ -93,7 +154,7 @@ artifacts, and the repo now refuses to report them.
    accepted if the length-only and label-permutation controls stay silent. Control-design
    traps found and fixed along the way: three in `results.md` M7, a fourth (a sham
    generator seeded with the caller's own seed reproduces the ground-truth direction
-   exactly) guarded by `test_steering_collapse.py`, and a fifth — the **dilution trap**
+   exactly) guarded by `tests/test_steering_collapse.py`, and a fifth — the **dilution trap**
    in (3), which is different in kind from the others: it is the only one where the
    whole control panel stays green while the experiment measures nothing. For that
    reason the repo now also audits the *treatment* (`SteerController`), not just the
@@ -101,7 +162,7 @@ artifacts, and the repo now refuses to report them.
 
 Full numbers, corrections and provenance: **`results.md`**. Write-up: **`paper.md`**.
 
-> ⚠️ **The committed `results_step6.txt` and `results_step7.txt` are diluted runs.**
+> ⚠️ **The committed `results/step6.txt` and `results/step7.txt` are diluted runs.**
 > Their *reading* accuracies, *cosine tables* and *reading controls* are fine (computed
 > without generation); their *steering slopes* and *p = 0.438* are not evidence of
 > anything. Re-run step6/step7 before quoting them.
@@ -109,11 +170,11 @@ Full numbers, corrections and provenance: **`results.md`**. Write-up: **`paper.m
 ## Reproduce (none of this needs a GPU)
 
 ```bash
-python test_grouped_cv.py          # fold invariants + template-memorization control
-python test_probe_calibration.py   # catches vacuous controls; calibrates the linear probe
-python test_reading_controls.py    # length/permutation controls vs synthetic ground truth
-python test_steering_collapse.py   # §4 mechanism (rowspace) + the dilution/treatment audit
-python test_docs_match_transcripts.py  # docs quote the committed step8 transcripts (numbers)
+python tests/test_grouped_cv.py          # fold invariants + template-memorization control
+python tests/test_probe_calibration.py   # catches vacuous controls; calibrates the linear probe
+python tests/test_reading_controls.py    # length/permutation controls vs synthetic ground truth
+python tests/test_steering_collapse.py   # §4 mechanism (rowspace) + the dilution/treatment audit
+python tests/test_docs_match_transcripts.py  # docs quote the committed step8 transcripts (numbers)
 python check_length_control.py     # re-derives the length control (tokenizer only, no model)
 MESE_DRY=1 MESE_QUICK=1 python step5_robust.py   # end-to-end wiring check, no model (~5 min)
 MESE_DRY=1 python step6_steer_all.py             # steerer wiring check, no model
@@ -124,17 +185,17 @@ Each dry run logs to its own `_dry` file (never a real result) and the two steer
 end with `[steering audit] N/N generations ran with the hook LIVE` — that line must be
 100%, and it is the check whose absence let a 20×-diluted null look clean.
 
-The GPU experiments (below) produce `results_step5.txt`, `results_step6.txt`,
-`results_step7.txt`, which are committed and cited in `results.md` — **but the step6 and
+The GPU experiments (below) produce `results/step5.txt`, `results/step6.txt`,
+`results/step7.txt`, which are committed and cited in `results.md` — **but the step6 and
 step7 logs are from the diluted loop and are withdrawn pending a re-run** (see
 `results.md` M9).
 
 ## A. Dataset — runs anywhere (no GPU, ~5 s)
 ```bash
-python dataset_templates.py     # -> easy.csv    (740 templated, guaranteed polarity)
-python dataset_hard.py          # -> hard.csv    (144 authored + automatic leakage audit)
+python dataset_templates.py     # -> data/easy.csv    (740 templated, guaranteed polarity)
+python dataset_hard.py          # -> data/hard.csv    (144 authored + automatic leakage audit)
 python dataset_merge.py         # -> dataset.py  (DATA + GROUPS, one gate before writing)
-python test_grouped_cv.py       # local self-test: fold invariants + memorization control
+python tests/test_grouped_cv.py       # local self-test: fold invariants + memorization control
 ```
 The audit must print `AUDIT CLEAN` and the merge must print `GATE REJECTED 0` /
 no rejections. `dataset.py` is generated — never edit it by hand.
@@ -152,7 +213,7 @@ Setup: `Runtime → Change runtime type → T4 GPU`, then run these cells:
 # 3) upload these files into /content (drag & drop, or the folder icon):
 #    dataset.py  probe_cv.py  steering_keys.py  step5_robust.py  step6_steer_all.py
 #    step7_sweep.py  analyze_step7.py  step8_dose.py
-#    check_length_control.py  test_*.py  (CPU-only, no model needed)
+#    check_length_control.py  tests/test_*.py  (CPU-only, no model needed)
 #    steering_keys.py is REQUIRED by step6/step7 -- omitting it stops the run
 #    immediately with "MISSING FILE(S): steering_keys.py".
 #    dry_model.py only if you intend to use MESE_DRY=1 (no model download).
@@ -171,11 +232,11 @@ Setup: `Runtime → Change runtime type → T4 GPU`, then run these cells:
 
 # 4b) OFFLINE SELF-TESTS first (CPU only, ~40 s, no model). These catch controls
 #     that would pass vacuously, and calibrate what a linear probe can earn here.
-!python test_grouped_cv.py
-!python test_probe_calibration.py
-!python test_reading_controls.py
+!python tests/test_grouped_cv.py
+!python tests/test_probe_calibration.py
+!python tests/test_reading_controls.py
 #     the doc<->transcript audit needs the committed transcripts (step 1 upload):
-!python test_docs_match_transcripts.py
+!python tests/test_docs_match_transcripts.py
 #     check_length_control.py re-derives the length-only reading control EXACTLY (10
 #     seeds + spread) and touches no model weights -- it downloads only the ~7 MB
 #     tokenizer, so it is a cheap way to verify a length claim off-GPU:
@@ -185,7 +246,7 @@ Setup: `Runtime → Change runtime type → T4 GPU`, then run these cells:
 #     (~5 min on CPU, measured 305 s). Activations are replaced by seeded noise, so it
 #     only proves the script runs end to end (probes -> controls -> flags -> log)
 #     before you spend GPU time. Its numbers are meaningless and it writes
-#     results_step5_dry.txt, never the real log.
+#     results/step5_dry.txt, never the real log.
 !MESE_DRY=1 MESE_QUICK=1 python step5_robust.py
 #     The same flag works on the steerer scripts, and there it matters MORE: it is
 #     what would have caught the dilution bug. Each ends with a
@@ -235,16 +296,16 @@ Setup: `Runtime → Change runtime type → T4 GPU`, then run these cells:
 #     misread as a null (results.md M13).
 # !MESE_AXIS=Arousal MESE_SHAM=25 python step8_dose.py
 #     Rename the log between axes so the runs do not merge (it APPENDS):
-# !mv results_step8_dose.txt results_step8_care_n15.txt
+# !mv results/step8_dose.txt results/step8_care_n15.txt
 
 # 8) nothing is lost if the session drops: the runs append to these logs
-!ls -la results_step5.txt results_step6.txt results_step7.txt results_step8_dose.txt
-!cat results_step7.txt | tail -40
+!ls -la results/step5.txt results/step6.txt results/step7.txt results/step8_dose.txt
+!cat results/step7.txt | tail -40
 
 # 9) download the logs to paste back into the chat
 from google.colab import files
-files.download('results_step5.txt'); files.download('results_step6.txt')
-files.download('results_step7.txt'); files.download('results_step8_dose.txt')
+files.download('results/step5.txt'); files.download('results/step6.txt')
+files.download('results/step7.txt'); files.download('results/step8_dose.txt')
 ```
 
 Optional older steps: `pilot.py`, `step2_probe.py`, `step3_rigorous.py`, `step4_steer.py`.
@@ -270,7 +331,7 @@ key/cosine/control/steering code actually executes — otherwise every axis woul
 gate and the dry run would test nothing. It exists to catch wiring errors (an undefined
 name, a broken control, a log that cannot be written, a treatment that is not applied)
 in minutes on CPU instead of after a model download, and it writes
-`results_step*_dry.txt` so a wiring check can never be mistaken for a real result.
+`results/*_dry.txt` so a wiring check can never be mistaken for a real result.
 A healthy step5 dry run must print **zero** `CONFOUND WARNING` / `LEAK WARNING` lines — on
 noise the length and permutation controls sit at 0.31–0.50 and 0.47–0.49, nowhere near
 their firing bars (length must reach the measured probe; permutation must reach 0.65).
@@ -282,9 +343,9 @@ a table in `results.md` / `paper.md`. The numbers that matter most:
 
 ## C. Optional: LLM-drafted extra hard sentences (treat as ideas, not labels)
 ```bash
-python dataset_generate.py      # drafts -> dataset_draft.csv (pre-filtered by the gate)
+python dataset_generate.py      # drafts -> data/dataset_draft.csv (pre-filtered by the gate)
 python dataset_validate.py      # flags LEAK / ABSTRACT / FRAGMENT / DUP
-python dataset_merge.py --review dataset_review.csv   # merge only un-flagged rows
+python dataset_merge.py --review data/dataset_review.csv   # merge only un-flagged rows
 ```
 
 ## D. Key files
@@ -295,18 +356,18 @@ python dataset_merge.py --review dataset_review.csv   # merge only un-flagged ro
 | `dataset_hard.py` | curated hard set (surface-neutral concrete events, mirrored pairs) |
 | `dataset_merge.py` | merge + final gate -> `dataset.py` (`DATA`, `GROUPS`) |
 | `probe_cv.py` | model-free CV harness (random vs grouped) + template-identity control |
-| `steering_keys.py` | ONE definition of the steering-key family (mean/logreg/lda/probe-grad/-path/-class/random) shared by step6, step7 and `test_steering_collapse.py`, **plus `SteerController`**, which arms the hook per generation and counts how many generations really ran steered |
+| `steering_keys.py` | ONE definition of the steering-key family (mean/logreg/lda/probe-grad/-path/-class/random) shared by step6, step7 and `tests/test_steering_collapse.py`, **plus `SteerController`**, which arms the hook per generation and counts how many generations really ran steered |
 | `dry_model.py` | 28-layer, d=64 char-level toy LM that honours the real hook API, used only under `MESE_DRY=1` so step6/step7 can be wired-checked with no download |
-| `test_grouped_cv.py` | CPU self-test of the split logic and the memorization gap |
-| `test_steering_collapse.py` | CPU self-test of the §4 mechanism (rowspace theorem; `-path`/`-class` do NOT escape it; contingency contrast), the sham seed-collision trap, **section D: the dilution trap** (old loop steers 2 of 40; `SteerController` 40 of 40; `check()` raises on a shortfall), and **section E: device hygiene** (AST scan for `randn(device=+CPU generator)`, the CUDA-only crash) |
+| `tests/test_grouped_cv.py` | CPU self-test of the split logic and the memorization gap |
+| `tests/test_steering_collapse.py` | CPU self-test of the §4 mechanism (rowspace theorem; `-path`/`-class` do NOT escape it; contingency contrast), the sham seed-collision trap, **section D: the dilution trap** (old loop steers 2 of 40; `SteerController` 40 of 40; `check()` raises on a shortfall), and **section E: device hygiene** (AST scan for `randn(device=+CPU generator)`, the CUDA-only crash) |
 | `check_length_control.py` | CPU self-test (tokenizer only, no model): re-derives the length-only reading control at 10 seeds with its spread |
 | `step5_robust.py` | Observer results: random row, grouped row, template-identity control row, plus per-axis label-permutation + length-only controls |
 | `step6_steer_all.py` | Steerer results: measurability gate, 7 directions (incl. probe-grad/-path/-class), sham, fluency, `[steering audit]` |
 | `step7_sweep.py` | Steering SEARCH: layer sweep x token-pooling (mean/last) x axis, same gate + sham; `MESE_SHAM=n` builds a sham distribution; per-cell label-permutation + length-only reading controls |
-| `analyze_step7.py` | CPU noise analysis of `results_step7.txt` (real-vs-sham stats, sign consistency, permutation p) |
+| `analyze_step7.py` | CPU noise analysis of `results/step7.txt` (real-vs-sham stats, sign consistency, permutation p) |
 | `step8_dose.py` | DOSE-FINDING: was the Step 6 null real, or just under-scaled? Per-scale tone + fluency on a WIDE ladder, a sham **distribution** (`MESE_SHAM`), paired per-sample slopes, and a template-grouped instrument gate at step5's protocol (hidden=64, reps=10). Defaults to Care/Harm |
-| `test_reading_controls.py` | CPU self-test of those reading controls (perm -> chance; length confound must be caught) |
-| `test_probe_calibration.py` | CPU calibration: catches vacuous low-capacity controls; what a linear probe can earn here |
-| `test_docs_match_transcripts.py` | CPU doc↔transcript audit (126 checks): re-derives both step8 transcripts' DECISION blocks from raw per-scale rows; every headline number quoted in README/paper/results must match the parsed values; stale-claim phrases retired in M13e asserted absent |
+| `tests/test_reading_controls.py` | CPU self-test of those reading controls (perm -> chance; length confound must be caught) |
+| `tests/test_probe_calibration.py` | CPU calibration: catches vacuous low-capacity controls; what a linear probe can earn here |
+| `tests/test_docs_match_transcripts.py` | CPU doc↔transcript audit (126 checks): re-derives both step8 transcripts' DECISION blocks from raw per-scale rows; every headline number quoted in README/paper/results must match the parsed values; stale-claim phrases retired in M13e asserted absent |
 | `results.md` | results log incl. corrected findings |
 | `paper.md` | draft paper |

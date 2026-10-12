@@ -204,7 +204,7 @@ def _norm(s):
     return re.sub(r"[^a-z0-9 ]", "", s.lower()).strip()
 
 
-def audit(rows, easy_path="easy.csv"):
+def audit(rows, easy_path="data/easy.csv"):
     """Return (problems, stats). A problem-free audit is required before merge."""
     problems = []
     seen = {}
@@ -260,5 +260,6 @@ if __name__ == "__main__":
             print("  -", p)
     else:
         print("\nAUDIT CLEAN: no leakage words, all concrete, no duplicates.")
-    write_csv("hard.csv", rows)
-    print(f"WROTE hard.csv: {len(rows)} hard-context sentences")
+    os.makedirs("data", exist_ok=True)
+    write_csv("data/hard.csv", rows)
+    print(f"WROTE data/hard.csv: {len(rows)} hard-context sentences")

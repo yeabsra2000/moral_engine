@@ -29,8 +29,8 @@ def flags_for(axis_label, sentence):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--probe", action="store_true", help="run probe-disagreement check (needs GPU/model)")
-    ap.add_argument("--draft", default="dataset_draft.csv")
-    ap.add_argument("--out", default="dataset_review.csv")
+    ap.add_argument("--draft", default="data/dataset_draft.csv")
+    ap.add_argument("--out", default="data/dataset_review.csv")
     args = ap.parse_args()
 
     with open(args.draft, encoding="utf-8", newline="") as f:

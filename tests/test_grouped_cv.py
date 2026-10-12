@@ -1,7 +1,7 @@
 """
 MESE-CR — local (CPU, no model) test for the split logic
 ========================================================
-Run:  python test_grouped_cv.py
+Run:  python tests/test_grouped_cv.py  (from the repo root)
 
 Two things are verified, both on the REAL dataset.py labels/GROUPS:
 
@@ -27,13 +27,17 @@ try:
     _HERE = os.path.dirname(os.path.abspath(__file__))
 except NameError:                              # pasted into a notebook cell
     _HERE = os.getcwd()
-for _p in (_HERE, os.getcwd()):
+# Repo root: this file lives in tests/, its imports live at the root. Anchor on
+# the required file so a notebook paste (flat layout) resolves to the cwd too.
+_ROOT = _HERE if os.path.exists(os.path.join(_HERE, "dataset.py")) \
+    else os.path.dirname(_HERE)
+for _p in (_HERE, _ROOT, os.getcwd()):
     if _p not in sys.path:
         sys.path.insert(0, _p)
 _REQUIRED = ["dataset.py", "probe_cv.py"]
 _MISSING = [f for f in _REQUIRED
             if not any(os.path.exists(os.path.join(_p, f))
-                       for _p in (_HERE, os.getcwd()))]
+                       for _p in (_HERE, _ROOT, os.getcwd()))]
 if _MISSING:
     raise SystemExit(
         "\nMISSING FILE(S): %s\n"

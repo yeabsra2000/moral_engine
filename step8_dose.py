@@ -54,7 +54,9 @@ if _HERE not in sys.path:
     sys.path.insert(0, _HERE)
 
 # Same two files are mandatory; a helpful error beats a bare ImportError on Colab.
-_REQUIRED = ("dataset.py", "steering_keys.py")
+# probe_cv.py joins them because the instrument gate imports it mid-run (after the
+# model has already loaded) -- failing early there saves a wasted download.
+_REQUIRED = ("dataset.py", "steering_keys.py", "probe_cv.py")
 _MISSING = [f for f in _REQUIRED
             if not any(os.path.exists(os.path.join(p, f))
                        for p in (_HERE, os.getcwd()))]
@@ -121,8 +123,8 @@ BREAK_FL = 0.20
 # Set MESE_SEED=1 (or any new value) for fresh streams; the run header prints it.
 SEED_REP = os.environ.get("MESE_SEED", "0")
 
-LOG = os.environ.get("MESE_LOG", "results_step8_dose_dry.txt" if DRY
-                     else "results_step8_dose.txt")
+LOG = os.environ.get("MESE_LOG", "results/step8_dose_dry.txt" if DRY
+                     else "results/step8_dose.txt")
 class _Tee:
     def __init__(self, *s): self.s = s
     def write(self, t):
@@ -134,6 +136,7 @@ class _Tee:
         for st in self.s:
             try: st.flush()
             except Exception: pass
+os.makedirs(os.path.dirname(LOG) or ".", exist_ok=True)
 _log = open(LOG, "a", encoding="utf-8")
 _log.write(f"\n===== step8 dose run {datetime.datetime.now():%Y-%m-%d %H:%M:%S} "
            f"axis={AXIS} dry={DRY} =====\n")

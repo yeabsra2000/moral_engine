@@ -115,7 +115,7 @@ if QUICK:
 # A DRY run gets its OWN log by default, so a wiring check can never mix into (or be
 # mistaken for) real model output. Override with MESE_LOG if you want it elsewhere.
 LOG = os.environ.get("MESE_LOG",
-                     "results_step6_dry.txt" if DRY else "results_step6.txt")
+                     "results/step6_dry.txt" if DRY else "results/step6.txt")
 class _Tee:
     """Mirror stdout into a log file; never let logging break the run."""
     def __init__(self, *streams): self.streams = streams
@@ -132,6 +132,7 @@ class _Tee:
                 st.flush()
             except Exception:
                 pass
+os.makedirs(os.path.dirname(LOG) or ".", exist_ok=True)
 _log = open(LOG, "a", encoding="utf-8")
 _log.write(f"\n===== step6 run {datetime.datetime.now():%Y-%m-%d %H:%M:%S} "
            f"quick={QUICK} dry={DRY} =====\n")

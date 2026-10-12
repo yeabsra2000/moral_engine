@@ -7,7 +7,7 @@ the label), so these need no human review. Path = easy.csv
 Format per record: sentence | V | A | C | F | easy
   +1 = pos/arousing/care/fair   -1 = neg/calm/harm/cheat   0 = neutral for that axis
 """
-import itertools, csv
+import itertools, csv, os
 
 AXES = ["Valence", "Arousal", "Care/Harm", "Fairness"]
 
@@ -96,9 +96,10 @@ def write_csv(path, rows):
 
 if __name__ == "__main__":
     rows = build_easy(with_group=True)
-    write_csv("easy.csv", rows)
+    os.makedirs("data", exist_ok=True)
+    write_csv("data/easy.csv", rows)
     from collections import Counter
-    print(f"WROTE easy.csv: {len(rows)} sentences")
+    print(f"WROTE data/easy.csv: {len(rows)} sentences")
     for ax in range(4):
         c = Counter(r[1 + ax] for r in rows)
         print(f"  {AXES[ax]}: {dict(c)}")

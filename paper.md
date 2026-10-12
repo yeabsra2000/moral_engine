@@ -57,7 +57,7 @@ class — therefore differs only in its per-unit gate scalars and cannot leave t
 subspace. On real activations the three gradient keys are mutually **cos 0.995–1.000**;
 `cos(logreg, mean) = +1.000` exactly, so the fitted logistic key is not independent
 either; and even the probe's own supervised gradient sits at **cos 0.845–0.982** with
-the plain mean difference. `test_steering_collapse.py` confirms the subspace containment
+the plain mean difference. `tests/test_steering_collapse.py` confirms the subspace containment
 to machine precision (residual **0.000000**) on synthetic data, with no model. The
 consequence is a *bound on the method*, not yet a measured null: a probe that can *read*
 a nonlinear boundary (grouped MLP 0.78–0.98 vs grouped linear 0.46–0.66) derives all of
@@ -124,7 +124,7 @@ are now appearing (Da Silva et al., ACL 2025), so the contribution that travels 
 *(Numbers below come from the released scripts' real CUDA output on the 884-sentence
 dataset: the full Observer grid (REPS=10, layers 12/14/16) and the step7
 key/layer/pooling grid. The key-position cosine table is produced by `steering_keys.py`
-and needs no GPU; `test_steering_collapse.py` verifies its central identity offline.*
+and needs no GPU; `tests/test_steering_collapse.py` verifies its central identity offline.*
 
 **Read the labels on the steering tables.** Anything reporting a *reading* accuracy, a
 *cosine between keys*, or a *control* (length, label-permutation, sham) was computed
@@ -165,7 +165,7 @@ independent replication).
   repairs do not escape it; (3) the deliberate separation of the *structural* claim from
   the *contingent* one, which is what keeps the finding from being a tautology;
   (4) a scale-bound, control-heavy negative result, plus an offline test
-  (`test_steering_collapse.py`) that reproduces the mechanism with no model at all.
+  (`tests/test_steering_collapse.py`) that reproduces the mechanism with no model at all.
 
 ## 2. Related Work (cite correctly — do NOT claim these are new)
 - Probing / concept bottleneck models: Alain & Bengio (2018, linear probes); Belinkov
@@ -211,9 +211,9 @@ independent replication).
 ## 3. Method
 - Model: Qwen/Qwen2.5-1.5B-Instruct; layers {12,14,16}; mean-pooled hidden states.
 - **Dataset (M4): 884 sentences, generated deterministically and audited in code.**
-  - `easy.csv` (740): filler-slot templates whose polarity is guaranteed by
+  - `data/easy.csv` (740): filler-slot templates whose polarity is guaranteed by
     construction (keyword-driven). No human review needed.
-  - `hard.csv` (144): hand-authored, *surface-neutral, concrete-event* sentences,
+  - `data/hard.csv` (144): hand-authored, *surface-neutral, concrete-event* sentences,
     18 mirrored pos/neg motif pairs per axis (36/axis). Written because the LLM
     drafts proved unusable (see below). Audited automatically for: one-hot label,
     no leakage word from any axis lexicon, concrete actor/object, 6–32 words, no
@@ -238,7 +238,7 @@ independent replication).
   the cell is reported as a possible length/positional artifact rather than tone.
   Template identity cannot serve as a control for a *grouped* accuracy: it is held
   out wholesale and therefore sits at chance for every pooling.
-- **Probe calibration** (`test_probe_calibration.py`, offline): on a synthetic set
+- **Probe calibration** (`tests/test_probe_calibration.py`, offline): on a synthetic set
   that is linearly separable *by construction* (label = sign(x·w)), under this exact
   protocol and optimizer a linear probe reaches only 0.75 and the MLP 0.78, and 5x
   the training moves linear by +0.04 — so linear-vs-MLP here is an operational
@@ -276,7 +276,7 @@ per-unit gate vector ḡ. **Averaging cannot change where the key points; it can
 re-weight the hidden units.** What we called the "nonlinear steering key" is a linear
 functional of `W₁` wearing a nonlinear probe's clothes.
 
-Verified in `test_steering_collapse.py` (CPU, no model): the fraction of each probe key
+Verified in `tests/test_steering_collapse.py` (CPU, no model): the fraction of each probe key
 lying *outside* `rowspace(W₁)` is **0.000000** to machine precision, while the same
 measure for the plain `mean` key is 0.331 — so the containment is specific to gradient
 keys and is not a triviality.
@@ -299,7 +299,7 @@ pooling (step6; 0.845–0.982 across axes, and 0.72–0.98 across the 24 step7 c
 | Care/Harm | 0.98 | **+1.000** | +0.429 | +0.960 | −0.055 |
 | Fairness | 0.66 | **+1.000** | +0.493 | +0.845 | −0.030 |
 
-(Values are from the committed `results_step6*.txt` logs; the `steering_keys.py`
+(Values are from the committed `results/step6*.txt` logs; the `steering_keys.py`
 refactor preserves this arithmetic exactly and the next run prints a fuller table,
 adding `probe-grad-path` / `probe-grad-class` per axis.) Two things fall out:
 
@@ -321,7 +321,7 @@ from `mean` (measured **cos 0.39**) while still lying inside `rowspace(W₁)`. S
 theorem explains why probe keys agree with *each other*; BCE training aligning `W₁` with
 the class-separation direction is what explains why they agree with `mean` on real
 activations. Two claims, two tests, both asserted separately in
-`test_steering_collapse.py`.
+`tests/test_steering_collapse.py`.
 
 **Therefore** the confinement is a bound on the method, not an explanation of a
 measured failure. Every key derivable from the probe is confined to a subspace the probe
@@ -371,7 +371,7 @@ run never applied its own treatment (§4 / revision note, `results.md` §M9).
   readable tone structure is NONLINEAR — the first grouped-CV evidence that the
   nonlinear probe exploits structure a single hyperplane cannot.
   The obvious objection — that the linear probe is merely undertrained — is ruled out
-  by calibration (`test_probe_calibration.py`): on synthetic data that is linearly
+  by calibration (`tests/test_probe_calibration.py`): on synthetic data that is linearly
   separable *by construction*, this protocol and optimizer give a linear probe only
   0.75 and an MLP 0.78, and 5× the training moves linear by just +0.04. The linear
   shortfall is therefore a property of the d≫n estimation regime, not of the training
@@ -389,7 +389,7 @@ run never applied its own treatment (§4 / revision note, `results.md` §M9).
   re-run is specified, but **no step6/step7 steering slope in this paper is evidence of
   anything yet** — the steerer evidence this paper cites is the audited *dose* protocol
   (step8; `results.md` M12/M13d), which supersedes this grid for the steering question.
-  `results_step6.txt` remains in the repo as the record of the diluted run, labelled.
+  `results/step6.txt` remains in the repo as the record of the diluted run, labelled.
   The *cosines* in the discussion below are unaffected: they come from §4.0, not from
   generation.
 
@@ -435,7 +435,7 @@ cannot discriminate between them. The confound that matters for last-token pooli
 `step7_sweep.py` runs two controls per cell (label-permutation, which must collapse to
 ~0.50; length-only, which must stay well below the probe) and prints a CONFOUND WARNING
 when length alone matches the probe. Both are unit-tested offline
-(`test_reading_controls.py`, all pass; a single-seed permutation control wanders to
+(`tests/test_reading_controls.py`, all pass; a single-seed permutation control wanders to
 ~0.64, so controls are averaged over 3 seeds). The same two controls now also run on the
 **mean-pooled headline readings** and **have run on the model** (`step5_robust.py`:
 length-only 0.27 / 0.35 / 0.53 / 0.61 on A/V/F/C over 10 seeds, permutation 0.44–0.51, no
@@ -602,7 +602,7 @@ controls, however, have not been re-run**, so the last-token > mean contrast rem
   **What we can stand behind is the mechanism, and it is proved rather than observed.**
   §4.0 shows, for a two-layer probe, that `∇f(x) ∈ rowspace(W₁)` at every point, so any
   key derived from the probe by averaging is confined to a subspace it never needed in
-  order to *read* — and `test_steering_collapse.py` verifies that to machine precision on
+  order to *read* — and `tests/test_steering_collapse.py` verifies that to machine precision on
   a CPU with no model at all. On real activations the gradient keys sit at cos
   0.845–0.982 with the plain mean difference, and `cos(logreg, mean) = +1.000` exactly,
   so two of the seven "independent" keys are the same key — and that half of the
@@ -630,7 +630,7 @@ controls, however, have not been re-run**, so the last-token > mean contrast rem
   0-of-15 separation would have been reported as a null; the verdict now prints the floor
   and returns `CANDIDATE` instead, and the per-scale fluency label is sign-aware (an
   *improvement* was reading as "MODEL DEGRADING"). ✅ The **Arousal** dose run then
-  landed at n=25 and is persisted (`results_step8_arousal_n25.txt`): **SEPARABLE**,
+  landed at n=25 and is persisted (`results/step8_arousal_n25.txt`): **SEPARABLE**,
   z = +2.83, 0/25 shams, p = 0.038 (at the floor), monotone — so the steerer result is
   axis-dependent (M12 null + M13d pass), and an independent replication is available
   via `MESE_SEED=1`;
@@ -665,7 +665,7 @@ prediction, not an observation, until the re-run.
 `probe-grad-path` and `probe-grad-class` sit at cos 0.995–1.000 with it, because
 averaging the Jacobian only rescales the per-unit gates (§4.0). This one is the
 strongest item in the section, since it is both a theorem and a measured
-machine-precision result in `test_steering_collapse.py`. We report it as a bound on the
+machine-precision result in `tests/test_steering_collapse.py`. We report it as a bound on the
 method family rather than leaving the lever untested.
 
 (b)/(c) ⚠️ **withdrawn — empirical.** `step7_sweep.py` searches layers × {mean,
@@ -694,28 +694,28 @@ small-scale artifact and the mechanism needs a size term. Either outcome is a re
 universal.
 
 ## Appendix: Reproducibility
-- Data pipeline (no GPU needed): `dataset_templates.py` → `easy.csv`;
-  `dataset_hard.py` → `hard.csv` (+ audit); `dataset_merge.py` → `dataset.py`
+- Data pipeline (no GPU needed): `dataset_templates.py` → `data/easy.csv`;
+  `dataset_hard.py` → `data/hard.csv` (+ audit); `dataset_merge.py` → `dataset.py`
   (`DATA` + `GROUPS`); `dataset_generate.py` / `dataset_validate.py` for LLM drafts.
-- Local tests (CPU only, no model): `python test_grouped_cv.py` verifies the fold
+- Local tests (CPU only, no model): `python tests/test_grouped_cv.py` verifies the fold
   invariants and measures the template-memorization gap; `python
-  test_probe_calibration.py` shows that a low-capacity control probe passes vacuously
+  tests/test_probe_calibration.py` shows that a low-capacity control probe passes vacuously
   and calibrates what a linear probe can earn under this protocol (0.75 on a set that
-  is linearly separable by construction); `python test_reading_controls.py` checks the
+  is linearly separable by construction); `python tests/test_reading_controls.py` checks the
   label-permutation and length-only controls against synthetic ground truth;
-  `python test_steering_collapse.py` verifies the §4.0 mechanism — that all three probe
+  `python tests/test_steering_collapse.py` verifies the §4.0 mechanism — that all three probe
   gradient keys lie in `rowspace(W₁)` to machine precision (residual 0.000000) while
   `mean` does not, that path- and class-averaging do not escape the point key
   (cos 0.995–1.000), that on a *nonlinear* boundary the probe key points away from
   `mean` (cos 0.39), and that a sham generator seeded with the caller's own seed
-  reproduces the ground-truth direction exactly. `python test_docs_match_transcripts.py`
+  reproduces the ground-truth direction exactly. `python tests/test_docs_match_transcripts.py`
   (126 checks) re-derives both step8 transcripts' DECISION blocks from their raw
   per-scale rows and asserts that every headline value quoted in this paper, README and
   results.md matches the parsed transcript, with the stale phrases retired during audit
   asserted absent — documentation drift fails a test instead of surfacing as a reviewer
   comment. `probe_cv.py` holds the shared,
   model-free CV logic and `steering_keys.py` the shared key estimators *and* the
-  `SteerController` hook. Section D of `test_steering_collapse.py` also reproduces the
+  `SteerController` hook. Section D of `tests/test_steering_collapse.py` also reproduces the
   dilution bug on a fake layer (2 of 40 generations steered) and asserts that
   `SteerController` cannot under-apply — the check that was missing when the steering
   null was written. Section E adds a device-hygiene check that *can* run on CPU: an AST
@@ -725,16 +725,16 @@ universal.
   `step3_rigorous.py`, `step4_steer.py`, `step5_robust.py`, `step6_steer_all.py`,
   `step7_sweep.py`.
 - Noise analysis of the steering search (CPU only): `python analyze_step7.py`
-  parses `results_step7.txt` and prints the real-vs-sham distribution statistics,
+  parses `results/step7.txt` and prints the real-vs-sham distribution statistics,
   the sign-consistency check, and the sham noise floor. ⚠️ The committed
-  `results_step7.txt` is a **withdrawn** diluted run, so re-run step7 first; the parser
+  `results/step7.txt` is a **withdrawn** diluted run, so re-run step7 first; the parser
   itself is unchanged and will accept the new log.
-- Logs and corrected findings: `results.md` (`results_step5*.txt`,
-  `results_step6*.txt`, `results_step7.txt`).
+- Logs and corrected findings: `results.md` (`results/step5*.txt`,
+  `results/step6*.txt`, `results/step7.txt`).
 - Cost control: `MESE_DRY=1 python step5_robust.py` runs the entire Observer analysis
   with **no model** (activations replaced by seeded noise) in ~5 min on a laptop CPU
   (305 s measured, QUICK mode), so wiring errors are caught before GPU time is spent.
-  It logs to `results_step5_dry.txt` (never the real log) and, on noise, must print no
+  It logs to `results/step5_dry.txt` (never the real log) and, on noise, must print no
   `CONFOUND WARNING` / `LEAK WARNING` lines. **`MESE_DRY=1 python step6_steer_all.py`
   and `MESE_DRY=1 python step7_sweep.py` do the same for the steerer** using the
   `dry_model.py` stub (28-layer, d=64 char-level toy that honours the real hook API), and

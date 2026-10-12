@@ -34,7 +34,7 @@ generator with the same seed the caller used for the ground-truth direction
 reproduces that direction exactly (cos = +1.000), i.e. a "random" control that
 IS the answer.
 
-Run from the repo root:  python test_steering_collapse.py
+Run from the repo root:  python tests/test_steering_collapse.py
 """
 import os, sys
 
@@ -46,11 +46,15 @@ try:
     _HERE = os.path.dirname(os.path.abspath(__file__))
 except NameError:                              # pasted into a notebook cell
     _HERE = os.getcwd()
-for _p in (_HERE, os.getcwd()):
+# Repo root: this file lives in tests/, the sources it audits live at the root.
+# Anchor on the required file so a notebook paste (flat layout) resolves to cwd.
+_ROOT = _HERE if os.path.exists(os.path.join(_HERE, "steering_keys.py")) \
+    else os.path.dirname(_HERE)
+for _p in (_HERE, _ROOT, os.getcwd()):
     if _p not in sys.path:
         sys.path.insert(0, _p)
 if not any(os.path.exists(os.path.join(_p, "steering_keys.py"))
-           for _p in (_HERE, os.getcwd())):
+           for _p in (_HERE, _ROOT, os.getcwd())):
     raise SystemExit(
         "\nMISSING FILE(S): steering_keys.py\n"
         "  This test must run from the repo root (next to its logic files).\n"
@@ -305,7 +309,8 @@ def _offending_randn(path):
 
 SCAN = ["steering_keys.py", "step5_robust.py", "step6_steer_all.py", "step7_sweep.py",
         "probe_cv.py", "dry_model.py"]
-bad = [h for name in SCAN if pathlib.Path(name).exists() for h in _offending_randn(name)]
+bad = [h for name in SCAN if pathlib.Path(_ROOT, name).exists()
+       for h in _offending_randn(str(pathlib.Path(_ROOT, name)))]
 check("no randn() mixes device= with a CPU generator", float(len(bad)), 0.0, 0.0)
 for b in bad:
     print(f"       OFFENDER: {b}")
@@ -404,11 +409,11 @@ import subprocess
 #     per process in Python 3, so a control seeded from it is not reproducible.
 _here = os.path.dirname(os.path.abspath(__file__)) or "."
 _probe = ("import sys; sys.path.insert(0, %r); from steering_keys import stable_seed; "
-          "print(stable_seed('Valence', 'mean'))" % os.path.abspath("."))
+          "print(stable_seed('Valence', 'mean'))" % _ROOT)
 _outs = set()
 for _ in range(2):
     _r = subprocess.run([sys.executable, "-c", _probe], capture_output=True, text=True,
-                        cwd=os.path.abspath("."))
+                        cwd=_ROOT)
     _outs.add(_r.stdout.strip())
 check("stable_seed is identical across processes", float(len(_outs)), 1.0, 1.001)
 print(f"       (2 separate processes both returned: {list(_outs)[0][:14]}...)")
@@ -430,17 +435,19 @@ _seed_probe = ("import sys, os; sys.path.insert(0, %r)\n"
                "import re\n"
                "src = open('step8_dose.py').read()\n"
                "print('scale' in src.split('def seed_cell')[1].split('def ')[0].split('stable_seed')[1])"
-               % os.path.abspath("."))
+               % _ROOT)
 _r = subprocess.run([sys.executable, "-c", _seed_probe], capture_output=True, text=True,
-                    cwd=os.path.abspath("."))
-_body = open("step8_dose.py", encoding="utf-8").read().split("def seed_cell")[1].split("\ndef ")[0]
+                    cwd=_ROOT)
+_body = open(os.path.join(_ROOT, "step8_dose.py"),
+             encoding="utf-8").read().split("def seed_cell")[1].split("\ndef ")[0]
 _seed_expr = _body.split("stable_seed(")[1].split(")")[0]
 check("seed_cell does NOT mix `scale` into the seed", float("scale" in _seed_expr), 0.0, 0.0)
 print(f"       (seed expression is stable_seed({_seed_expr}) -- no `scale` term, so every")
 print("        scale of one direction shares a stream and the slope is paired.)")
 
 # (4) And the same for step6, so the two scripts cannot drift apart.
-_b6 = open("step6_steer_all.py", encoding="utf-8").read().split("def seed_cell")[1].split("\ndef ")[0]
+_b6 = open(os.path.join(_ROOT, "step6_steer_all.py"),
+           encoding="utf-8").read().split("def seed_cell")[1].split("\ndef ")[0]
 _e6 = _b6.split("stable_seed(")[1].split(")")[0]
 check("step6 seed_cell does NOT mix `scale` either", float("scale" in _e6), 0.0, 0.0)
 print(f"       (step6: stable_seed({_e6}) -- consistent with step8.)")
@@ -448,7 +455,7 @@ print(f"       (step6: stable_seed({_e6}) -- consistent with step8.)")
 # (5) A sham DISTRIBUTION, not one draw. One post-hoc sham is a lottery; the first
 #     dose run had a single sham that "beat" the real key, which says nothing about
 #     the null. MESE_SHAM must therefore default to >1.
-_s8 = open("step8_dose.py", encoding="utf-8").read()
+_s8 = open(os.path.join(_ROOT, "step8_dose.py"), encoding="utf-8").read()
 check("sham distribution is configurable (MESE_SHAM)", float("MESE_SHAM" in _s8), 1.0, 1.001)
 check("sham sloped, not just generated",
       float("SHAM_SLOPES" in _s8), 1.0, 1.001)
@@ -517,7 +524,7 @@ check("Care/Harm (2/15, z~1.08) still reads NULL",
       float(_v2 == "NULL"), 1.0, 1.001)
 print(f"       (replay: z={_z2:+.2f}, p={_p2:.3f} -> '{_v2}'; matches the logged +1.08)")
 
-# The n=25 run (persisted as results_step8_arousal_n25.txt) makes the same
+# The n=25 run (persisted as results/step8_arousal_n25.txt) makes the same
 # separation formally significant: 0/25 -> p = 1/26 = 0.038. These are the real
 # sham slopes (tone@10 - tone@0) read off that transcript, so the check replays an
 # ACTUAL run rather than a synthetic one; z reproduces the logged +2.83.

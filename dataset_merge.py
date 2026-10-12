@@ -31,7 +31,7 @@ def load(path):
 
 def collect(review_path=None):
     """Return (rows, rejected, source_counts); rows = (sentence, [V,A,C,F], kind, group)."""
-    easy = load("easy.csv")
+    easy = load("data/easy.csv")
     if review_path:
         hard_src = "review:" + review_path
         drafts = load(review_path)
@@ -39,8 +39,8 @@ def collect(review_path=None):
         for r in hard:
             r.setdefault("group", "draft|" + _norm(r["sentence"])[:40])
     else:
-        hard_src = "curated hard.csv"
-        hard = load("hard.csv") if os.path.exists("hard.csv") else None
+        hard_src = "curated data/hard.csv"
+        hard = load("data/hard.csv") if os.path.exists("data/hard.csv") else None
         if hard is None:
             import dataset_hard
             hard = []

@@ -1,0 +1,209 @@
+# 1. Independent Arousal replication — closes the "deterministic extension" caveat
+MESE_AXIS=Arousal MESE_SHAM=25 MESE_SEED=1 python step8_dose.py
+#    → save as results/step8_arousal_seed1.txt
+#    If SEPARABLE again: "replicated". If CANDIDATE/NULL: report both honestly.
+
+# 2. (same session, optional) recover the withdrawn step6/7 grid + close the
+#    "last-token reading is suggestive" caveat
+python step6_steer_all.py          # must print [steering audit] N/N
+MESE_SHAM=20 python step7_sweep.py
+
+
+
+
+
+
+[log] writing to results/step8_dose.txt  |  axis=Arousal scales=[0.0, 4.0, 10.0, 25.0, 50.0] directions=['mean', 'random'] samples=6 dry=False seed_rep=1
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+config.json: 100% 660/660 [00:00<00:00, 2.87MB/s]
+tokenizer_config.json: 100% 7.30k/7.30k [00:00<00:00, 26.9MB/s]
+vocab.json: 100% 2.78M/2.78M [00:00<00:00, 65.4MB/s]
+merges.txt: 100% 1.67M/1.67M [00:00<00:00, 115MB/s]
+tokenizer.json: 100% 7.03M/7.03M [00:00<00:00, 143MB/s]
+[transformers] `torch_dtype` is deprecated! Use `dtype` instead!
+
+model.safetensors: downloading bytes:   0% 0.00/3.09G [00:00<?, ?B/s]
+model.safetensors: downloading bytes:   2% 61.4M/3.09G [00:01<00:34, 87.3MB/s, 4.21MB/s  ]
+model.safetensors: downloading bytes:   3% 83.1M/3.09G [00:01<00:25, 116MB/s, 5.89MB/s  ] 
+model.safetensors: downloading bytes:   3% 101M/3.09G [00:01<00:22, 131MB/s, 7.93MB/s  ] 
+model.safetensors: downloading bytes:   7% 210M/3.09G [00:02<00:14, 199MB/s, 17.2MB/s  ]
+model.safetensors: downloading bytes:   8% 233M/3.09G [00:02<00:14, 195MB/s, 19.3MB/s  ]
+model.safetensors: downloading bytes:   8% 260M/3.09G [00:02<00:16, 168MB/s, 22.4MB/s  ]
+model.safetensors: downloading bytes:  10% 315M/3.09G [00:02<00:13, 210MB/s, 25.9MB/s  ]
+model.safetensors: reconstructing file:  10% 300M/3.09G [00:02<00:14, 189MB/s, 24.0MB/s  ]
+model.safetensors: downloading bytes:  12% 375M/3.09G [00:02<00:13, 208MB/s, 30.6MB/s  ]
+model.safetensors: downloading bytes:  21% 640M/3.09G [00:03<00:07, 331MB/s, 51.5MB/s  ]
+model.safetensors: downloading bytes:  62% 1.92G/3.09G [00:07<00:04, 287MB/s,  132MB/s  ]
+model.safetensors: downloading bytes:  66% 2.04G/3.09G [00:08<00:04, 218MB/s,  135MB/s  ]
+model.safetensors: downloading bytes:  73% 2.24G/3.09G [00:09<00:04, 197MB/s,  140MB/s  ]
+model.safetensors: downloading bytes:  87% 2.69G/3.09G [00:10<00:01, 269MB/s,  158MB/s  ]
+model.safetensors: reconstructing file:  46% 1.41G/3.09G [00:11<00:13, 124MB/s, 81.4MB/s  ]
+model.safetensors: reconstructing file:  54% 1.68G/3.09G [00:12<00:08, 159MB/s, 83.5MB/s  ]
+model.safetensors: reconstructing file:  61% 1.87G/3.09G [00:13<00:06, 180MB/s, 98.9MB/s  ]
+model.safetensors: reconstructing file:  70% 2.15G/3.09G [00:16<00:06, 143MB/s,  109MB/s  ]
+model.safetensors: reconstructing file:  76% 2.34G/3.09G [00:17<00:05, 136MB/s,  110MB/s  ]
+model.safetensors: reconstructing file:  85% 2.61G/3.09G [00:18<00:02, 166MB/s,  112MB/s  ]
+model.safetensors: reconstructing file:  91% 2.81G/3.09G [00:19<00:01, 176MB/s,  124MB/s  ]
+model.safetensors: downloading bytes: 100% 2.69G/2.69G [00:20<00:00, 132MB/s,  158MB/s  ]
+model.safetensors: reconstructing file: 100% 3.09G/3.09G [00:20<00:00, 151MB/s,  143MB/s  ]
+Loading weights: 100% 338/338 [00:00<00:00, 388.53it/s]
+generation_config.json: 100% 242/242 [00:00<00:00, 1.46MB/s]
+model=Qwen/Qwen2.5-1.5B-Instruct  depth=28  steering layer=14  dtype=torch.bfloat16
+==============================================================================
+DOSE-FINDING on Arousal @ layer 14. scales=[0.0, 4.0, 10.0, 25.0, 50.0]
+Per-scale tone AND fluency. Fluency is the signal for 'too strong'.
+==============================================================================
+[dtype check] features torch.float32 on cuda:0; probe will match
+Arousal: 136 sentences (68 pos / 68 neg)
+[grouping] 28 groups, 18 mirrored
+probe HELD-OUT (template-grouped) accuracy = 0.84 +/- 0.07 (2*SE)  <-- honest instrument quality; gate 0.6
+       (gate protocol: hidden=64, reps=10, same as the measuring probe)
+       (in-sample below is optimistic: `net` was fit on exactly this data.)
+probe in-sample accuracy = 1.00
+[gate] instrument = template-grouped held-out 0.84  (gate 0.6)
+cos(mean, random) = 0.028  (the sham must point somewhere unrelated)
+
+--- direction: mean ----------------------------------------
+  scale     tone   fluency    d_flu  status
+      0   -0.716    -2.944    0.000  
+      4   -0.349    -3.069   -0.125  
+     10   -0.011    -2.584    0.359  fluency shifted UP (check for loops)
+     25   +0.238    -3.425   -0.481  MODEL DEGRADING (too strong)
+     50   +1.000    -2.653    0.291  fluency shifted UP (check for loops)
+
+--- direction: random ----------------------------------------
+  scale     tone   fluency    d_flu  status
+      0   -0.318    -2.828    0.000  
+      4   -0.145    -2.522    0.306  fluency shifted UP (check for loops)
+     10   -0.456    -2.391    0.438  fluency shifted UP (check for loops)
+     25   -0.495    -2.691    0.138  
+     50   -0.226    -5.013   -2.184  MODEL DEGRADING (too strong)
+
+[steering audit] 240/300 generations had the hook LIVE (240 should have been).
+
+[dose] median ||h|| at layer 14 = 56.50 (pre-addition)
+[dose] scale      4  ->   7.08% of ||h||
+[dose] scale     10  ->  17.70% of ||h||
+[dose] scale     25  ->  44.25% of ||h||
+[dose] scale     50  ->  88.50% of ||h||
+
+=== sham distribution: 25 independent random directions ===
+  sham 0: 0=+0.011  4=-0.653  10=-0.325  25=-0.669  50=-0.564
+  sham 1: 0=-0.475  4=-0.414  10=-0.160  25=-0.142  50=-0.426
+  sham 2: 0=-0.476  4=-0.454  10=-0.298  25=-0.054  50=+0.273
+  sham 3: 0=-0.176  4=+0.294  10=-0.082  25=+0.461  50=-0.044
+  sham 4: 0=-0.284  4=-0.506  10=-0.528  25=-0.662  50=-0.868
+  sham 5: 0=-0.493  4=-0.605  10=+0.055  25=+0.110  50=+0.054
+  sham 6: 0=+0.118  4=+0.230  10=-0.017  25=+0.585  50=-0.201
+  sham 7: 0=-0.395  4=-0.446  10=-0.420  25=-0.172  50=-0.595
+  sham 8: 0=-0.430  4=-0.566  10=-0.614  25=-0.478  50=-0.359
+  sham 9: 0=-0.260  4=-0.211  10=-0.581  25=-0.414  50=+0.007
+  sham 10: 0=-0.661  4=-0.584  10=-0.409  25=-0.667  50=-0.165
+  sham 11: 0=-0.430  4=-0.258  10=-0.187  25=-0.431  50=+0.033
+  sham 12: 0=-0.496  4=-0.424  10=-0.131  25=-0.590  50=+0.111
+  sham 13: 0=-0.098  4=-0.364  10=-0.321  25=-0.362  50=+0.409
+  sham 14: 0=-0.093  4=-0.023  10=-0.153  25=-0.010  50=+0.056
+  sham 15: 0=-0.489  4=-0.752  10=-0.733  25=-0.187  50=-0.920
+  sham 16: 0=-0.403  4=-0.593  10=-0.299  25=-0.494  50=-0.026
+  sham 17: 0=-0.485  4=-0.617  10=-0.233  25=+0.046  50=-0.079
+  sham 18: 0=-0.452  4=-0.205  10=-0.129  25=-0.028  50=+0.013
+  sham 19: 0=-0.809  4=-0.454  10=-0.374  25=-0.340  50=-0.479
+  sham 20: 0=-0.417  4=-0.481  10=-0.198  25=-0.679  50=-0.501
+  sham 21: 0=-0.155  4=-0.087  10=-0.302  25=+0.044  50=-0.638
+  sham 22: 0=-0.178  4=+0.189  10=+0.019  25=-0.460  50=+0.464
+  sham 23: 0=-0.254  4=-0.403  10=-0.459  25=-0.018  50=+0.077
+  sham 24: 0=-0.162  4=-0.248  10=-0.468  25=-0.559  50=-0.238
+
+==============================================================================
+DECISION
+==============================================================================
+ real             mean: paired slope +0.367 +/- 0.151 (z=+2.43) at scale 4 [fluency-intact window <= 4]
+ SHAM           random: paired slope -0.176 +/- 0.072 (z=-2.44) at scale 25 [fluency-intact window <= 25]
+
+  all slopes below are PAIRED, at scale 4 (fluency-intact for the real key)
+  sham slope distribution: mean=-0.008 sd=0.238 (n=25)
+  range: [-0.664, +0.471]
+
+  real `mean` key: +0.367 +/- 0.151 ->  z vs sham dist = +1.57
+  empirical: 1/25 sham directions reach it (add-one p = 0.077; floor at this n = 0.038)
+
+  VERDICT: NOT SEPARABLE from random directions.
+           z=+1.57 < 2 against the sham distribution: random
+           directions reach this size routinely. A null at this
+           dose -- not a steering result.
+
+[steering audit incl. shams] 3240/4050 hook LIVE (3240 should have been).
+
+Read it this way:
+  * fluency BROKEN before tone moves  -> ladder too strong; bisect DOWN.
+  * tone moves with fluency INTACT    -> REAL steering effect; the old null was
+                                       mis-scaled, not a null.
+  * no tone shift, and the sham is the same size -> likely a null, but only
+    meaningful if the [dose] percentages reached a level where fluency was at
+    risk. A sub-5% dose cannot support a no-effect claim.
+  * `p < 0.05` needs n >= 20 shams. The add-one p floors at 1/(n+1), so at n=15
+    the test is UNSATISFIABLE: a clean 0-of-15 is a CANDIDATE, never a null.
+CUDA: True
+[log] writing to results/step6.txt  |  QUICK=False DRY=False (prompts=5, samples=4, scales=[0.0, 1.5, 4.0, 10.0, 25.0], directions=['mean', 'logreg', 'lda', 'probe-grad', 'probe-grad-path', 'probe-grad-class', 'random'])
+Full run: ~20-40 min on a T4. QUICK run: ~4-6 min. Keep the browser tab open.
+[transformers] `torch_dtype` is deprecated! Use `dtype` instead!
+Loading weights: 100% 338/338 [00:00<00:00, 339.35it/s]
+model=Qwen/Qwen2.5-1.5B-Instruct  depth=28  steering layer=14
+==============================================================================
+Steering toward POSITIVE on all 4 axes @ layer 14. directions = ['mean', 'logreg', 'lda', 'probe-grad', 'probe-grad-path', 'probe-grad-class', 'random']
+tone in -1..1 (measured with the steer hook OFF); fluency = mean per-token logp.
+Measuring-probe gate: template-grouped held-out accuracy must be >= 0.6.
+==============================================================================
+
+### Valence: 176 sentences (88 pos / 88 neg), 32 groups
+    measuring probe held-out accuracy = 0.72   (gate 0.6)
+    (where each key POINTS: cos vs the mean key; +1.000 = same direction as the plain mean difference)
+      cos(          logreg, mean) = +1.000
+      cos(             lda, mean) = +0.731
+      cos(      probe-grad, mean) = +0.982
+      cos( probe-grad-path, mean) = +0.982
+      cos(probe-grad-class, mean) = +0.982
+      cos(          random, mean) = +0.021
+  [            mean] tone  0=-0.03  1.5=+0.05  4=+0.04  10=+0.20  25=+0.27   slope=+0.30
+                      fluency 0=-2.86  1.5=-2.78  4=-2.76  10=-2.66  25=-2.57
+  [          logreg] tone  0=-0.02  1.5=-0.02  4=+0.08  10=+0.06  25=+0.22   slope=+0.24
+                      fluency 0=-2.77  1.5=-2.98  4=-3.12  10=-2.83  25=-2.65
+  [             lda] tone  0=+0.05  1.5=+0.02  4=+0.07  10=+0.07  25=+0.25   slope=+0.20
+                      fluency 0=-2.52  1.5=-2.48  4=-2.35  10=-2.29  25=-2.79
+  [      probe-grad] tone  0=-0.03  1.5=-0.00  4=-0.01  10=+0.08  25=+0.17   slope=+0.19
+                      fluency 0=-2.06  1.5=-2.13  4=-2.21  10=-2.75  25=-2.27
+  [ probe-grad-path] tone  0=+0.08  1.5=+0.12  4=+0.12  10=+0.16  25=+0.17   slope=+0.08
+                      fluency 0=-2.89  1.5=-2.83  4=-2.85  10=-2.46  25=-2.64
+  [probe-grad-class] tone  0=+0.01  1.5=+0.13  4=-0.02  10=+0.01  25=+0.14   slope=+0.12
+                      fluency 0=-3.19  1.5=-2.88  4=-2.55  10=-2.22  25=-2.59
+  [          random] tone  0=+0.06  1.5=+0.06  4=+0.07  10=+0.04  25=-0.05   slope=-0.11
+                      fluency 0=-2.19  1.5=-2.19  4=-2.17  10=-2.13  25=-2.63
+    [noise floor] scale-0 replicates [-0.03, -0.02, 0.05, -0.03, 0.08, 0.01, 0.06]
+                  mean=+0.019 sd=0.046  se(slope)=0.065
+                  a pure-noise run peaks at ~2.4 z, so any |z| below
+                  that is indistinguishable from sampling noise:
+                    z(            mean) = 4.62   slope=+0.30  <-- above noise
+                    z(          logreg) = 3.64   slope=+0.24  <-- above noise
+                    z(             lda) = 3.14   slope=+0.20  <-- above noise
+                    z(      probe-grad) = 2.99   slope=+0.19  <-- above noise
+                    z( probe-grad-path) = 1.28   slope=+0.08
+                    z(probe-grad-class) = 1.86   slope=+0.12
+                    z(          random) = 1.63   slope=-0.11
+
+### Arousal: 136 sentences (68 pos / 68 neg), 28 groups
+    measuring probe held-out accuracy = 0.82   (gate 0.6)
+    (where each key POINTS: cos vs the mean key; +1.000 = same direction as the plain mean difference)
+      cos(          logreg, mean) = +1.000
+      cos(             lda, mean) = +0.704
+      cos(      probe-grad, mean) = +0.963
+      cos( probe-grad-path, mean) = +0.963
+      cos(probe-grad-class, mean) = +0.963
+      cos(          random, mean) = +0.030
+  [            mean] tone  0=-0.12  1.5=-0.01  4=-0.06  10=+0.10  25=+0.28   slope=+0.40
+                      fluency 0=-2.80  1.5=-2.66  4=-2.71  10=-2.85  25=-2.78
+  [          logreg] tone  0=-0.21  1.5=-0.21  4=-0.06  10=-0.08  25=+0.01   slope=+0.22
+                      fluency 0=-1.97  1.5=-1.99  4=-2.29  10=-2.55  25=-2.29
+  [             lda] tone  0=-0.28  1.5=-0.28  4=-0.28  10=-0.29  25=-0.13   slope=+0.15
+                      fluency 0=-2.29  1.5=-2.32  4=-2.29  10=-2.13  25=-2.50
+  [      probe-grad] tone  0=-0.01  1.5=-0.02  4=-0.04  10=-0.01  25=+0.34   slope=+0.35
+                      fluency 0=-2.59  1.5=-2.68  4=-2.96  10=-2.83  25=-2.82

@@ -92,7 +92,8 @@ for axis, poles in CELLS.items():
             rows.append([s] + vals + [lbl, scenario])
         print(f"{axis:>10} {pole:>3}: kept {len(got)}/{TARGET_PER_CELL}")
 
-with open("dataset_draft.csv", "w", newline="", encoding="utf-8") as f:
+os.makedirs("data", exist_ok=True)
+with open("data/dataset_draft.csv", "w", newline="", encoding="utf-8") as f:
     w = csv.writer(f); w.writerow(["sentence", "V", "A", "C", "F", "proposed", "scenario"]); w.writerows(rows)
-print(f"\nWROTE dataset_draft.csv: {len(rows)} hard-context candidates for review "
+print(f"\nWROTE data/dataset_draft.csv: {len(rows)} hard-context candidates for review "
       f"({rejected} drafts rejected by the leakage/concreteness gate).")

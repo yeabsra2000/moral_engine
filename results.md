@@ -78,7 +78,7 @@ Findings (INITIAL):
 > then disarmed it on the first sample ("clear steer to measure honestly"), so only
 > 1 of every (5 prompts x 4 samples) = 20 generations was actually steered. Measured
 > offline by counting live-hook state: **2 of the 40 should-be-steered generations
-> were steered** (`test_steering_collapse.py`, section D). A real effect of size e
+> were steered** (`tests/test_steering_collapse.py`, section D). A real effect of size e
 > therefore reads as ~e/20 — right at the sham noise floor — which is exactly what
 > the table shows. **These numbers are not evidence of a null, and the reading below
 > (written before M9) is not supported by them.** The fix (`SteerController` in
@@ -156,7 +156,7 @@ because those come from §4.0/M8 and not from generation.
 > result below, that last-token pooling reads better than mean pooling, still stands;
 > only the steering null does not.
 
-Script `step7_sweep.py`; log `results_step7.txt`; analyser `analyze_step7.py`.
+Script `step7_sweep.py`; log `results/step7.txt`; analyser `analyze_step7.py`.
 Grid = layers {14, 20, 26} × pooling {mean, last} × 4 axes = 24 cells. Per cell we
 train the measuring probe AT that layer/pooling (template-grouped CV gate), then
 steer with mean / probe-grad / SHAM(random) at scales {0, 1.5, 4}. This tests paper
@@ -174,7 +174,7 @@ steer with mean / probe-grad / SHAM(random) at scales {0, 1.5, 4}. This tests pa
   residual co-encodes where the sentence ended). `step7_sweep.py` computes, per cell, a
   **label-permutation** control (must collapse to ~0.50) and a **length-only** control
   (must stay well below the probe), and prints `CONFOUND WARNING` when length alone
-  matches it; offline unit test `test_reading_controls.py` passes all 5 checks. **Those
+  matches it; offline unit test `tests/test_reading_controls.py` passes all 5 checks. **Those
   per-cell controls have not been re-run on the model**, so treat this contrast as
   *suggestive* until `step7_sweep.py` is re-run on Colab.
   ✅ The **mean-pooled** readings, by contrast, ARE now controlled on the model — same two
@@ -257,8 +257,8 @@ there is no consistent effect to report.
 
 
 ## M4 — Dataset scale-up (884 sentences) + data-quality findings
-Sources: `dataset_templates.py` → easy.csv (740, magnitude-templated, polarity
-guaranteed by construction) and `dataset_hard.py` → hard.csv (144 hand-authored
+Sources: `dataset_templates.py` → data/easy.csv (740, magnitude-templated, polarity
+guaranteed by construction) and `dataset_hard.py` → data/hard.csv (144 hand-authored
 hard-context sentences: 18 mirrored pos/neg motif pairs per axis).
 Merged by `dataset_merge.py` → dataset.py: 884 sentences, 146 template/motif
 groups, per-axis active counts V 88/88, A 68/68, C 218/218, F 68/68 (balanced).
@@ -276,7 +276,7 @@ shared lexicon, and `dataset_generate.py` pre-filters drafts with it, so the
 draft path is only a source of ideas, not of labels.
 
 ## M5 — Protocol validity: template memorization inflates random-split probes  ⚠️
-`python test_grouped_cv.py` (CPU-only, no model) runs the SAME CV on a control
+`python tests/test_grouped_cv.py` (CPU-only, no model) runs the SAME CV on a control
 feature space that contains ONLY the template identity (+noise) and therefore no
 tone information at all:
 
@@ -287,7 +287,7 @@ tone information at all:
 | Care/Harm | 436 | 0.93      | 0.54–0.55  | +0.38 |
 | Fairness  | 136 | 0.76–0.77 | 0.45–0.46  | +0.31 |
 
-Every cell is the envelope of **four re-runs** of `test_grouped_cv.py`, not a point value:
+Every cell is the envelope of **four re-runs** of `tests/test_grouped_cv.py`, not a point value:
 each drifts ~±0.01 between runs (torch CPU thread scheduling), so the second decimal is not
 reproducible and an earlier revision of this table pinned it (grouped 0.54 / 0.44 / 0.55 /
 0.46) as if it were. Quote the range. The conclusion is unaffected — template identity alone
@@ -310,7 +310,7 @@ Consequences for the write-up (this supersedes earlier claims):
   to seven keys, including two non-point repairs of the probe gradient.)
 
 ## M7 — Probe calibration: two traps found while adding reading controls  ⚠️✅
-Found offline (`test_probe_calibration.py`, `test_reading_controls.py`; both ALL PASS,
+Found offline (`tests/test_probe_calibration.py`, `tests/test_reading_controls.py`; both ALL PASS,
 CPU, no model). Both traps can silently fake a result.
 
 **Trap 1 — a control probe with too little capacity passes vacuously.**
@@ -352,7 +352,7 @@ training settings, not as a representational proof.
 
 **Plumbing check.** `MESE_DRY=1 MESE_QUICK=1 python step5_robust.py` now runs the whole
 Observer grid with **no model** (activations = seeded noise; own log
-`results_step5_dry.txt`, deleted again afterwards). Measured: exit 0, **305 s** wall on
+`results/step5_dry.txt`, deleted again afterwards). Measured: exit 0, **305 s** wall on
 a laptop CPU, all four axes, **0** `CONFOUND WARNING` / `LEAK WARNING` lines across two
 runs — length control 0.31–0.50 and label-permutation control 0.47–0.49 — i.e. the
 controls stay silent on data with no signal (the leak branch never fires) and every new
@@ -371,7 +371,7 @@ modules), and against a `dataset.py` without `GROUPS` (still a plain `ImportErro
 the old fallback path is intact).
 
 ## M6 — Final CUDA numbers on the 884-sentence dataset  ✅
-Source: `results_step5.txt` (Observer) + `results_step6.txt` (Steerer), layer 14.
+Source: `results/step5.txt` (Observer) + `results/step6.txt` (Steerer), layer 14.
 
 ### Observer — grouped (whole template held out), full 10x5-fold run (layers 12/14/16)
 Grouped MLP accuracy per layer (mean ± 2·SE):
@@ -424,10 +424,10 @@ control is compared against the final probe number rather than a REPS=3 one:
 | Care/Harm | 0.98                         | **0.61 ±0.05 (0.55–0.68)** | 0.49       | none  |
 | Fairness  | 0.79                         | 0.53 ±0.09 (0.40–0.68)     | 0.46       | none  |
 
-The probe column is now the **layer-14 row of the M6 table** (`results_step5 (1).txt`,
+The probe column is now the **layer-14 row of the M6 table** (`results/step5_alt.txt`,
 10×5-fold) rather than a REPS=3 value, so the control and the thing it guards against come
 from one saved, reproducible source. An earlier revision of this table quoted grouped
-Valence as **0.92** — that is the *random-split* number from `results_step5.txt`; the
+Valence as **0.92** — that is the *random-split* number from `results/step5.txt`; the
 grouped number is 0.82, and comparing a control against a random-split figure would
 re-import exactly the template memorization M5/M6 exist to remove.
 
@@ -486,7 +486,7 @@ Raw per-run values, `python check_length_control.py`.
 
 Added 2026-10-02. This is the paper's spine: §4.0 of `paper.md`. It is **GPU-free** —
 the identity is proved for the probe architecture and verified on CPU by
-`test_steering_collapse.py`, and the cosine table is pure vector math on activations
+`tests/test_steering_collapse.py`, and the cosine table is pure vector math on activations
 the grid already captured. **Status after M9: unchanged.** Nothing here involves
 generation, so the mechanism stands even though the steering null it was meant to
 explain was withdrawn one day later. (The heading originally read "why the null is
@@ -503,7 +503,7 @@ a path (μ⁻→μ⁺), or the whole positive class — is `W₁ᵀ·diag(ḡ)·
 re-weight the hidden units; it **cannot change where the key points**. So "probe-grad"
 is a linear functional of `W₁` that happens to sit inside a nonlinear probe.
 
-**Verified offline** (`test_steering_collapse.py`, CPU, no model — 17/17 checks pass):
+**Verified offline** (`tests/test_steering_collapse.py`, CPU, no model — 17/17 checks pass):
 - fraction of each probe key lying *outside* `rowspace(W₁)`: **0.000000** (all three
   variants), vs **0.331** for the plain `mean` key → the containment is specific to
   gradient keys and is not vacuous.
@@ -516,7 +516,7 @@ is a linear functional of `W₁` that happens to sit inside a nonlinear probe.
   class-separation direction), *not* a consequence of the theorem alone. Keeping these
   two claims separate is what makes the finding non-tautological.
 
-**On the real model** (from the committed `results_step6*.txt`, layer 14 / mean pooling —
+**On the real model** (from the committed `results/step6*.txt`, layer 14 / mean pooling —
 unchanged by the `steering_keys.py` refactor, which preserves the arithmetic exactly):
 
 | Axis | probe acc | cos(logreg, mean) | cos(lda, mean) | cos(probe-grad, mean) | cos(sham, mean) |
@@ -540,7 +540,7 @@ Across the 24 step7 cells `cos(probe-grad, mean)` = 0.72–0.98. Two consequence
 sham generator with the *same* seed the caller used for the ground-truth direction
 reproduces that direction **exactly** (`cos = +1.000`) — i.e. a "random" control that
 *is* the answer. `steering_keys.py` now uses a distinctive `DEFAULT_SHAM_SEED` and
-`test_steering_collapse.py` asserts the sham stays orthogonal (≤ 0.20).
+`tests/test_steering_collapse.py` asserts the sham stays orthogonal (≤ 0.20).
 
 **What changed in the code:**
 - new `steering_keys.py` — ONE definition of the key family (mean / logreg / lda /
@@ -570,7 +570,7 @@ the scale question (see the TODO below), which the 3B/8B rung answers directly.
 ## M9 — The dilution trap: the steer was only applied to 1 in 20 generations  ❌✅
 Found 2026-10-03 while wiring the `MESE_DRY` mode (`dry_model.py`), and it invalidates
 the Step 6 / Step 7 steering nulls. Offline, CPU, no model:
-`test_steering_collapse.py` section D.
+`tests/test_steering_collapse.py` section D.
 
 **The bug.** The steering loop in `step6_steer_all.py` and `step7_sweep.py` was:
 
@@ -666,7 +666,7 @@ step6/step7 built `_sig` from CPU tensors (`LAB` and `_dirs` are CPU) and added 
 box `MESE_DRY=1` would raise a device mismatch — and the README explicitly encourages
 running dry modes on Colab. Both now move the tensors with an explicit `.to(...)`.
 
-**The guard (runs on CPU):** scenario E of `test_steering_collapse.py`.
+**The guard (runs on CPU):** scenario E of `tests/test_steering_collapse.py`.
 - *runtime*: `sham_vector` matches a reference CPU draw exactly, is repeatable, and
   honours the requested device;
 - *static*: an **AST** scan of the six GPU-reachable source files for
@@ -814,7 +814,7 @@ VERDICT: CANDIDATE -- NOT RESOLVED AT THIS SHAM COUNT.
 
 naming the floor and the n required, instead of `NOT SEPARABLE`. A genuine null still
 reports `NOT SEPARABLE` — the branch split is guarded by **scenario H** of
-`test_steering_collapse.py`, which replays both logged runs (Care/Harm reproduces
+`tests/test_steering_collapse.py`, which replays both logged runs (Care/Harm reproduces
 `z=+1.08, p=0.188` → NULL; Arousal reproduces `z=+2.64, p=0.062` → CANDIDATE).
 
 ### (b) A fluency IMPROVEMENT was labelled "MODEL DEGRADING"  ❌→✅
@@ -827,11 +827,11 @@ commented in the source.
 
 ### (c) The n=15 Arousal transcript was never persisted  🔴→✅ (superseded by (d))
 An Arousal dose run was executed and read during this session, but **no transcript
-reached the repo**: there is no `results_step8_arousal_n15.txt`, and
-`results_step8_dose.txt` is a **0-byte** file. The numbers below were therefore a
+reached the repo**: there is no `results/step8_arousal_n15.txt`, and
+`results/step8_dose.txt` is a **0-byte** file. The numbers below were therefore a
 **working observation, NOT a recorded result** — and must not be cited as one. They
 are kept because the n=25 run in (d) reproduced them *exactly* (same deterministic
-generation streams); the citable artifact is now `results_step8_arousal_n25.txt`.
+generation streams); the citable artifact is now `results/step8_arousal_n25.txt`.
 
 | quantity (Arousal, n=15, layer 14) | value |
 |---|---|
@@ -857,7 +857,7 @@ So this is a **candidate, not a confirmation** — exactly what the corrected ve
 
 ### (d) The n=25 run landed: SEPARABLE on both tests  ✅
 Command: `MESE_AXIS=Arousal MESE_SHAM=25 python step8_dose.py` — transcript persisted as
-`results_step8_arousal_n25.txt`. Every statistic below was independently recomputed from
+`results/step8_arousal_n25.txt`. Every statistic below was independently recomputed from
 the per-scale tone values in that transcript at persist time and matched the log exactly.
 
 | quantity (Arousal, n=25, layer 14) | value |
@@ -884,7 +884,7 @@ verdict itself demands before quoting. Three caveats keep it honest:
    +1.32 vs the real key's +1.40), though its pinned-scale slope (+0.550) stays well
    below +0.831; the best sham overall is +0.697 — within 0.5 sham-sd of the real key.
 
-**Guarded offline** (`test_docs_match_transcripts.py`, CPU, no model, 126 checks): both
+**Guarded offline** (`tests/test_docs_match_transcripts.py`, CPU, no model, 126 checks): both
 transcripts' DECISION blocks are re-derived from the raw per-scale rows, every headline
 value quoted in README/paper/results is checked against the parsed transcript values,
 and the stale-claim phrases retired in M13e are asserted absent. A stale number in a
@@ -922,7 +922,7 @@ on its own, geometry-only.
 
 ## M14 — The Arousal pass does NOT replicate: 1 of 2 seeds pass  ✅ RUN PERSISTED (NOT SEPARABLE)
 
-Command: `MESE_AXIS=Arousal MESE_SHAM=25 MESE_SEED=1 python step8_dose.py` (Google Colab T4, committed `step8_dose.py` at 080f8bc) — transcript persisted as `results_step8_arousal_seed1.txt`. `MESE_SEED=1` re-keys every cell's generation stream through `stable_seed`, so this run shares **no generations and no shams** with the M13d seed0 run: a genuine independent replication, not the deterministic extension M13d flagged (and requested via `MESE_SEED=1`). Every statistic below was independently recomputed from the transcript's raw per-scale rows at persist time and matched the log exactly; `test_docs_match_transcripts.py` now re-derives this DECISION block mechanically as well.
+Command: `MESE_AXIS=Arousal MESE_SHAM=25 MESE_SEED=1 python step8_dose.py` (Google Colab T4, committed `step8_dose.py` at 080f8bc) — transcript persisted as `results/step8_arousal_seed1.txt`. `MESE_SEED=1` re-keys every cell's generation stream through `stable_seed`, so this run shares **no generations and no shams** with the M13d seed0 run: a genuine independent replication, not the deterministic extension M13d flagged (and requested via `MESE_SEED=1`). Every statistic below was independently recomputed from the transcript's raw per-scale rows at persist time and matched the log exactly; `tests/test_docs_match_transcripts.py` now re-derives this DECISION block mechanically as well.
 
 | quantity (Arousal, n=25, layer 14, `MESE_SEED=1`) | value |
 |---|---|
@@ -966,16 +966,16 @@ What the mismatch does and does not show:
 - Untouched: the **M8 mechanism**, the **Observer grid**, and every other generation-free result — none of them ever depended on this.
 
 ### Also in M14: the step6 re-run paste is TRUNCATED (audit unverified)
-`results_step6_fixed_partial.txt` records the M9-fixed step6 running on GPU (committed step6 at 080f8bc, `python step6_steer_all.py`) into the Valence and Arousal sections, then cut mid-Arousal. **Not present:** Care/Harm, Fairness, the summary tables, the dose report, and the end-of-run `[steering audit] N/N` line — step6 prints that line once, after all axes, so its absence is truncation rather than a failed audit, but it also means **the audit is UNVERIFIED**. The complete log still lives on the Colab instance as `results_step6.txt` and has not been recovered. Standing rules for this artifact:
+`results/step6_fixed_partial.txt` records the M9-fixed step6 running on GPU (committed step6 at 080f8bc, `python step6_steer_all.py`) into the Valence and Arousal sections, then cut mid-Arousal. **Not present:** Care/Harm, Fairness, the summary tables, the dose report, and the end-of-run `[steering audit] N/N` line — step6 prints that line once, after all axes, so its absence is truncation rather than a failed audit, but it also means **the audit is UNVERIFIED**. The complete log still lives on the Colab instance as `results/step6.txt` and has not been recovered. Standing rules for this artifact:
 
 1. **step6 has no sham *distribution*** (a single `random` key), so by M13's rule **none of its slopes is steering evidence** either way — its noise-floor z tests against scale-0 sampling noise (sd ≈ 0.05), a far weaker null than step8's direction distribution (sd ≈ 0.24–0.28). Do not quote any step6 steering number until the tail is recovered and the audit line checked.
 2. What the partial *does* establish: the fixed loop ran end-to-end into Valence/Arousal, and the **Valence measuring-probe gate reads 0.72** under the fixed protocol — the axis that aborted step8 pre-M11 at 0.59 under the old `hidden=32` gate. The key-position cosines it prints (cos(logreg, mean) = +1.000, probe-grad ±0.982) match §4.0, as expected — those need no generation.
-3. Recover `results_step6.txt` from Colab (or re-run step6, ~20–40 min on T4) and check `[steering audit] N/N` before citing anything from this file.
+3. Recover `results/step6.txt` from Colab (or re-run step6, ~20–40 min on T4) and check `[steering audit] N/N` before citing anything from this file.
 
 
 ## TODO (before the final table in the paper)
 - ✅ **DONE (M13d): the AROUSAL DOSE at n=25.** `MESE_AXIS=Arousal MESE_SHAM=25` ran
-  and its transcript is persisted as `results_step8_arousal_n25.txt`
+  and its transcript is persisted as `results/step8_arousal_n25.txt`
   (SEPARABLE: z=+2.83, 0/25 shams, p=0.038 at the floor, monotone dose–response).
   Optional follow-up — an **independent** replication:
   ```
@@ -999,7 +999,7 @@ What the mismatch does and does not show:
 - ✅ DONE (was the old null, now INVALIDATED): probe-grad direction tested in step6;
   layer sweep + last-token search (step7). The *scripts* work and the reading half of
   step7 is valid, but their steering slopes must be discarded until re-run.
-- ✅ DONE: full Observer grid captured (REPS=10, layers 12/14/16) — `results_step5 (1).txt`.
+- ✅ DONE: full Observer grid captured (REPS=10, layers 12/14/16) — `results/step5_alt.txt`.
 - 🟡 RUN WITH THE RE-RUN (closes the flags): re-check the flagged cells with a sham
   DISTRIBUTION, e.g. `MESE_LAYERS=14,26 MESE_POOL=last MESE_SHAM=20 python step7_sweep.py`
   (per-cell z-score > 3).

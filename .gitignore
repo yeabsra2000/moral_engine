@@ -20,16 +20,16 @@ dataset.py.bak
 *.bak
 
 # Dry-run logs are wiring checks with meaningless numbers (MESE_DRY=1), so they must never
-# be mistaken for results. The real evidence logs (results_step5.txt, results_step6.txt,
-# results_step7.txt and the "(1)" duplicates) ARE committed and are cited in results.md.
-results_step*_dry.txt
+# be mistaken for results. The real evidence logs (results/step5.txt, results/step6.txt,
+# results/step7.txt and the *_alt.txt downloads) ARE committed and are cited in results.md.
+results/*_dry.txt
 
 # Colab scratch
 sample_data/
 
 # ---- scratch files ----
 # Leading-underscore files are throwaway (smoke tests, temp logs, commit messages).
-# Real tooling is NEVER underscore-prefixed; the four CPU self-tests and
+# Real tooling is NEVER underscore-prefixed; the five CPU self-tests in tests/ and
 # check_length_control.py are named as such deliberately.
 _*.py
 _*.txt

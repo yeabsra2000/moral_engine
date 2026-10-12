@@ -133,7 +133,7 @@ if QUICK:
 
 # ---- tee everything to a log file: a dropped Colab session must not lose the run ----
 LOG = os.environ.get("MESE_LOG",
-                     "results_step7_dry.txt" if DRY else "results_step7.txt")
+                     "results/step7_dry.txt" if DRY else "results/step7.txt")
 class _Tee:
     """Mirror stdout into a log file; never let logging break the run."""
     def __init__(self, *streams): self.streams = streams
@@ -150,6 +150,7 @@ class _Tee:
                 st.flush()
             except Exception:
                 pass
+os.makedirs(os.path.dirname(LOG) or ".", exist_ok=True)
 _log = open(LOG, "a", encoding="utf-8")
 _log.write(f"\n===== step7 run {datetime.datetime.now():%Y-%m-%d %H:%M:%S} "
            f"quick={QUICK} dry={DRY} =====\n")

@@ -16,7 +16,7 @@ Two things this pins down, because both can silently corrupt a CONTROL result:
    below the score that perfect linear structure would earn, which supports the
    "tone is not linearly recoverable" reading rather than undercutting it.
 
-Run from the repo root:  python test_probe_calibration.py
+Run from the repo root:  python tests/test_probe_calibration.py
 """
 import os, sys, statistics
 
@@ -28,11 +28,15 @@ try:
     _HERE = os.path.dirname(os.path.abspath(__file__))
 except NameError:                              # pasted into a notebook cell
     _HERE = os.getcwd()
-for _p in (_HERE, os.getcwd()):
+# Repo root: this file lives in tests/, probe_cv.py lives at the root. Anchor on
+# the required file so a notebook paste (flat layout) resolves to the cwd too.
+_ROOT = _HERE if os.path.exists(os.path.join(_HERE, "probe_cv.py")) \
+    else os.path.dirname(_HERE)
+for _p in (_HERE, _ROOT, os.getcwd()):
     if _p not in sys.path:
         sys.path.insert(0, _p)
 if not any(os.path.exists(os.path.join(_p, "probe_cv.py"))
-           for _p in (_HERE, os.getcwd())):
+           for _p in (_HERE, _ROOT, os.getcwd())):
     raise SystemExit(
         "\nMISSING FILE(S): probe_cv.py\n"
         "  This test must run from the repo root (next to its logic files).\n"

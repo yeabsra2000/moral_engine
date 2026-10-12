@@ -1,7 +1,7 @@
 """Doc <-> transcript audit for the step8 dose runs (no model, CPU, <1 s).
 
 WHY THIS TEST EXISTS. The paper quotes ~35 numbers from two committed GPU
-transcripts (`results_step8_care_n15.txt`, `results_step8_arousal_n25.txt`).
+transcripts (`results/step8_care_n15.txt`, `results/step8_arousal_n25.txt`).
 Every number in the docs was pasted by hand, and this repo's recurring bug
 class is "a control that reads as protective but is inert" -- a doc quoting a
 stale or transposed figure reads authoritative and is never re-checked by
@@ -21,7 +21,7 @@ eye. This test closes that loop mechanically:
 
 Stdlib only -- deliberately runnable on any machine with the repo checkout.
 
-Run from the repo root:  python test_docs_match_transcripts.py
+Run from the repo root:  python tests/test_docs_match_transcripts.py
 """
 import os
 import re
@@ -33,14 +33,18 @@ import sys
 _HERE = os.path.dirname(os.path.abspath(__file__)) if "__file__" in globals() else os.getcwd()
 
 REQUIRED = [
-    "results_step8_care_n15.txt",
-    "results_step8_arousal_n25.txt",
+    "results/step8_care_n15.txt",
+    "results/step8_arousal_n25.txt",
     "README.md",
     "paper.md",
     "results.md",
 ]
+# The transcript paths above are repo-relative, so also search the repo root
+# (the parent of this file's folder) — the suite must work from anywhere.
+_ROOT = os.path.dirname(_HERE)
 missing = [f for f in REQUIRED
-           if not any(os.path.exists(os.path.join(p, f)) for p in (_HERE, os.getcwd()))]
+           if not any(os.path.exists(os.path.join(p, f))
+                      for p in (_HERE, _ROOT, os.getcwd()))]
 if missing:
     raise SystemExit(
         "\nMISSING FILE(S): %s\n"
@@ -51,7 +55,7 @@ if missing:
 
 
 def _path(name):
-    for p in (_HERE, os.getcwd()):
+    for p in (_HERE, _ROOT, os.getcwd()):
         if os.path.exists(os.path.join(p, name)):
             return os.path.join(p, name)
     return name
@@ -170,8 +174,8 @@ print("SECTION A -- each transcript re-derives its own DECISION block from raw r
 print("=" * 78)
 
 RUNS = {}
-for tag, fname in (("care", "results_step8_care_n15.txt"),
-                   ("arousal", "results_step8_arousal_n25.txt")):
+for tag, fname in (("care", "results/step8_care_n15.txt"),
+                   ("arousal", "results/step8_arousal_n25.txt")):
     d = RUNS[tag] = parse_transcript(read(fname))
     slopes = sham_slopes(d)
     lad = mean_ladder(d)

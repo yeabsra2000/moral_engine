@@ -1,6 +1,6 @@
 """Analyse a step7 log: are the flagged cells real, or generation noise?
 
-Usage:  python analyze_step7.py [results_step7.txt]
+Usage:  python analyze_step7.py [results/step7.txt]
 
 Reports:
   1. per-pooling slope distributions for real directions vs the SHAM control
@@ -14,7 +14,7 @@ Works on the concatenated log the script writes (all runs appended).
 """
 import re, random, statistics as st, sys
 
-path = sys.argv[1] if len(sys.argv) > 1 else "results_step7.txt"
+path = sys.argv[1] if len(sys.argv) > 1 else "results/step7.txt"
 txt = open(path, encoding="utf-8").read()
 
 # keep only FULL runs (quick=False); drop the smoke grid

@@ -7,13 +7,30 @@ cannot drift from the script, then checks:
   3. length-only control -> ~chance when length is uninformative
   4. length-only control -> HIGH when length IS confounded (the last-token risk)
      i.e. the CONFOUND WARNING would fire, which is the point of the control.
+
+Run from the repo root:  python tests/test_reading_controls.py
 """
-import ast, random, statistics
+import ast, os, random, statistics
 from collections import defaultdict
 
 import torch
 
-SRC = open("step7_sweep.py", encoding="utf-8").read()
+# ---- source file: this file lives in tests/, step7_sweep.py at the repo root ----
+try:
+    _HERE = os.path.dirname(os.path.abspath(__file__))
+except NameError:                              # pasted into a notebook cell
+    _HERE = os.getcwd()
+_SRC = next((os.path.join(p, "step7_sweep.py")
+             for p in (_HERE, os.path.dirname(_HERE), os.getcwd())
+             if os.path.exists(os.path.join(p, "step7_sweep.py"))), None)
+if _SRC is None:
+    raise SystemExit(
+        "\nMISSING FILE: step7_sweep.py\n"
+        "  This test exec()s the real control functions out of that script, so it\n"
+        "  must run from the repo root:  python tests/test_reading_controls.py\n"
+        "    script folder : %s\n    working dir   : %s\n" % (_HERE, os.getcwd()))
+
+SRC = open(_SRC, encoding="utf-8").read()
 tree = ast.parse(SRC)
 WANT = {"group_folds", "probe_cv_acc", "control_acc"}
 funcs = {n.name: ast.get_source_segment(SRC, n) for n in tree.body

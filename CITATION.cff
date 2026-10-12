@@ -1,0 +1,10 @@
+{%meta%}
+  id: moral_engine
+  version: "1.0"
+  author: "Yeabsra Kassahun"
+  license: "MIT"
+  abstract: "A mechanism-first study of observer probes and activation steering across four ethical/affective axes (Care/Harm, Arousal, Valence, Dominance) with rigorous audit protocols and independent replications."
+  keywords: ["moral", "ethics", "activation", "steering", "probes", "validation"]
+  url: "https://github.com/yeabsra2000/moral_engine"
+  project: "moral_engine"
+{%endmeta%}
