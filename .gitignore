@@ -34,3 +34,11 @@ sample_data/
 _*.py
 _*.txt
 _*.csv
+# submission/posts/briefs (not part of codebase)
+arxiv_submission_notes.txt
+bluesky_x_thread.txt
+discord_lesswrong_posts.txt
+MESE_CR_brief*.txt
+MESE_CR_brief*.md
+test_results.zip
+results_to_return.zip

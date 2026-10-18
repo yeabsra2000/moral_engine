@@ -1,9 +1,0 @@
-Bluesky/X thread (concise):
-
-1/4: Template-based steering datasets can have polarity-locked endings that survive grouped CV -> inflated "readable" scores. We add a cross-group token control (shared_context_features) to catch frame leakage.
-
-2/4: Seeding by (axis,direction) only reuses RNG across samples -> pseudoreplication (understated SEs). Fix: seed by (prompt,sample), keep paired slopes.
-
-3/4: Probe-derived steering keys lie in rowspace(W1) and collapse onto mean on real activations (machine-checked). Geometrically, no reason to expect probe-grad to beat mean.
-
-4/4: With audited shams + corrected seeding: Care/Harm NULL; Arousal CANDIDATE (1 of 2 seeds). Sweep vs null distribution: no cell > 3σ. Repo: https://github.com/yeabsra2000/moral_engine

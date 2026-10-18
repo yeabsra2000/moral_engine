@@ -1,5 +1,0 @@
-MESE-CR: An audit of activation reading and steering for moral/emotional tone in Qwen2.5-1.5B-Instruct
-
-Large language models encode affective/moral information in activations. We audit template-based evaluation: (1) polarity-locked template endings create frame leakage that survives grouped cross-validation; we add a cross-group token control (shared_context_features) and a regression test. (2) RNG seeding that reused streams across samples caused pseudoreplication (understated SEs); we seed by (prompt,sample) while keeping paired slopes. (3) Probe-derived steering keys are constrained to rowspace(W1) and collapse onto mean on real activations (machine-checked). Under audited sham controls with corrected seeding: Care/Harm steering is NULL; Arousal is CANDIDATE (1 of 2 seeds). A layer/pooling sweep against a null distribution finds no cells exceeding z>3. Reading remains genuine under grouped CV with controls.
-
-Repo: https://github.com/yeabsra2000/moral_engine
