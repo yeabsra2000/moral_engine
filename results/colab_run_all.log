@@ -1,0 +1,66 @@
+[2026-10-18 17:39:34] === START colab_run_all ===
+[2026-10-18 17:39:34] RUN: C:\Users\Fitsum Hotel\AppData\Local\Programs\Python\Python312\python.exe step7_sweep.py
+CUDA: False
+[log] writing to results/step7_dry.txt  |  QUICK=True DRY=True
+layers=[14]  pools=['mean']  axes=['Valence']
+(prompts=2, samples=1, scales=[0.0, 4.0], directions=['mean', 'random'])
+*** DRY RUN: model NOT loaded, activations are a toy stub. Results are MEANINGLESS.
+[DRY RUN] model NOT loaded; dry_model.py stub (28 layers, d=64, char vocab).
+          Validates plumbing (hooks -> capture -> keys -> controls -> log) only.
+model=Qwen/Qwen2.5-1.5B-Instruct  depth=28
+
+capturing activations at layers [14] ...
+  200/884 sentences captured
+  400/884 sentences captured
+  600/884 sentences captured
+  800/884 sentences captured
+  built 1 activation matrices of shape torch.Size([884, 64])
+[DRY RUN] injected a synthetic label-correlated component into every cell so
+          the axes are measurable and the key/control code actually runs.
+
+==============================================================================
+step7 SEARCH: layer sweep x token-pooling x axis
+tone in -1..1 (measured with the steer hook OFF); fluency = mean per-token logp.
+Measuring-probe gate: template-grouped held-out accuracy must be >= 0.6.
+A 'real steer' = a real direction's slope clearly ABOVE the SHAM (random) slope.
+==============================================================================
+
+################ LAYER 14  |  POOL mean ################
+
+### L14 mean Valence: 176 sentences (88 pos / 88 neg), 32 groups
+    measuring probe held-out accuracy = 1.00   (gate 0.6)
+    CONTROLS: label-permutation = 0.52 (want ~0.50, noise floor ~0.55)   length-only = 0.32 (want << 1.00)
+    (where each key POINTS: cos vs the mean key; +1.000 = same direction as the plain mean difference)
+      cos(          logreg, mean) = +0.968
+      cos(             lda, mean) = +0.992
+      cos(      probe-grad, mean) = +0.826
+      cos( probe-grad-path, mean) = +0.860
+      cos(probe-grad-class, mean) = +0.826
+      cos(          random, mean) = -0.031
+  [      mean] tone  0.0=-0.16  4.0=+0.00   slope=+0.16   fluency=-1.49
+  [    random] tone  0.0=+0.24  4.0=-0.15   slope=-0.39   fluency=-1.67
+
+[steering audit] 4/8 generations ran with the hook LIVE (4 should have been; the rest are the scale=0 baseline).
+
+==============================================================================
+GRID SUMMARY   (slope = tone@max - tone@0; 'random' is the SHAM control)
+layer  pool axis       probe   mean probe-grad   SHAM   verdict
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!! WARNING: single sham DRAW (MESE_SHAM=1). A one-draw control has a noise
+!! floor ~ +/-0.2 at 20 generations/cell, so a fixed +0.10 threshold flags
+!! cells by chance (measured: 11/24 and 6/8 in two runs). The rows below are
+!! NOT findings. Re-run with MESE_SHAM=20 for a z-scored verdict.
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+   14  mean Valence     1.00  +0.16          -  -0.39   flag? best=mean BUT UNCONFIRMED (single sham draw; re-run MESE_SHAM=20)
+
+Cells beyond the sham: 1 / 1 measurable cells.   (criterion: best real slope > single sham draw + 0.10)
+=> These are FLAGS, not findings: a single sham draw cannot distinguish an
+   effect from generation noise. Re-run the same grid with MESE_SHAM=20 for a
+   per-cell z-score against a null DISTRIBUTION (that run CAN be quoted).
+
+READING CONTROLS recap (1 cells):
+  worst label-permutation accuracy = 0.52  (no leakage: CV is clean)
+  no cell is matched by length alone -> the reading result is not a
+     length artifact, so the last-token > mean pooling finding stands.
+[2026-10-18 17:40:10] OK rc=0
+[2026-10-18 17:40:10] RUN: C:\Users\Fitsum Hotel\AppData\Local\Programs\Python\Python312\python.exe step8_dose.py
