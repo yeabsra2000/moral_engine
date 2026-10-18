@@ -1,0 +1,9 @@
+r/LocalLLaMA/EleutherAI style short post:
+
+Title: MESE-CR: frame leak + pseudoreplication audit in activation steering
+
+TLDR: Found and fixed (1) frame leakage in template datasets (shared endings survive grouped CV), (2) pseudoreplication from seeding all samples identically (understated SEs). Probe-derived keys collapse to rowspace(W1). With audited shams + corrected seeding: Care/Harm NULL; Arousal CANDIDATE (1 of 2 seeds). Sweep with null distribution shows no steering > 3σ.
+
+Repo: https://github.com/yeabsra2000/moral_engine
+Brief: MESE_CR_brief.md
+Paper notes: arxiv_submission_notes.txt

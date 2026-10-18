@@ -1,4 +1,10 @@
-# MESE-CR — reading and steering moral/emotional tone in a small LLM
+# MESE-CR: Reading and steering moral/emotional tone in Qwen2.5-1.5B-Instruct
+
+## Abstract (short)
+
+MESE-CR audits activation reading/steering for moral/emotional tone (Valence, Arousal, Care/Harm, Fairness). We find: (1) Frame leakage in template datasets (polarity-locked endings survive grouped CV) and introduce cross-group token control (shared_context_features). (2) Pseudoreplication from seeding all samples per prompt identically (understated SEs); fixed to (prompt,sample) while keeping slopes paired. (3) Probe-derived steering keys lie in 
+owspace(W1) and collapse onto mean on real activations (machine-checked). Empirically: Care/Harm steering is NULL under audited sham control; Arousal is CANDIDATE (1 of 2 seeds) with corrected seeding; step7 layer/pooling sweep with null distribution shows no cell > 3σ. Reading generalizes under grouped CV with frame/leak controls.
+
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
