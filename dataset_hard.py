@@ -4,7 +4,8 @@ MESE-CR — M4 (part 1b): CURATED hard-context set
 Hand-authored HARD-context sentences: the tone/morality is entailed by a
 concrete SITUATION and cannot be read off a surface keyword. Written as
 mirrored pos/neg motif pairs so that every stimulus has an exact opposite
-(controls for topic and length, not just for labels).
+(controls for topic and entities; pair LENGTHS are audited separately and are
+NOT always matched -- see the pair-length warning in audit()).
 
 Why curated instead of LLM-drafted: the Qwen drafts (dataset_draft.csv ->
 dataset_review.csv) were dominated by keyword leakage ("relieved",
@@ -18,6 +19,9 @@ Guarantees checked in audit() below (via leak_lexicon):
   * concrete event (determiner phrase / name), not an abstract claim
   * 6..32 words, ends with a period, no duplicates, no overlap with easy.csv
   * mirrored pair: pos and neg differ in outcome, share topic/entities
+  * pair LENGTHS are reported: unmatched length is a confound (a length-only
+    probe can read tone), so pairs differing by more than MAX_PAIR_LEN_DIFF
+    words are surfaced as warnings rather than silently called "matched".
 Group key = motif id, shared by BOTH poles of a pair, so grouped CV holds a
 whole motif out (neither pole of a topic is ever in train and test at once).
 
@@ -204,6 +208,9 @@ def _norm(s):
     return re.sub(r"[^a-z0-9 ]", "", s.lower()).strip()
 
 
+MAX_PAIR_LEN_DIFF = 6   # words; beyond this a pair's length is a confound
+
+
 def audit(rows, easy_path="data/easy.csv"):
     """Return (problems, stats). A problem-free audit is required before merge."""
     problems = []
@@ -237,6 +244,23 @@ def audit(rows, easy_path="data/easy.csv"):
     stats["_len"] = Counter({f"min={min(lens)}": 1, f"max={max(lens)}": 1,
                             f"mean={sum(lens)/len(lens):.1f}": 1})
     stats["_groups"] = Counter({f"n={len({r[6] for r in rows if len(r) > 6})}": 1})
+    # per-pair length balance (mirrored pairs SHOULD match in length; a large gap
+    # means a length-only probe can read the pole). Reported as WARNINGS, not as
+    # hard failures, because the confound is inherent to the authored sentences:
+    # it must be disclosed and covered by step5's length-only control.
+    diffs, len_warn = [], []
+    for axis_idx, pairs in CELLS:
+        for motif, pos, neg in pairs:
+            d = abs(len(pos.split()) - len(neg.split()))
+            diffs.append(d)
+            if d > MAX_PAIR_LEN_DIFF:
+                len_warn.append(f"{motif}: pos/neg length differ by {d} words "
+                                f"(>{MAX_PAIR_LEN_DIFF}) -> length confound")
+    stats["_pair_len"] = Counter({f"max_diff={max(diffs)}": 1,
+                                  f"mean_diff={sum(diffs)/len(diffs):.1f}": 1,
+                                  f"unmatched(>{MAX_PAIR_LEN_DIFF})="
+                                  f"{sum(1 for d in diffs if d > MAX_PAIR_LEN_DIFF)}": 1})
+    stats["_warnings"] = len_warn
     return problems, stats
 
 
@@ -254,12 +278,19 @@ if __name__ == "__main__":
         print(f"{ax:>10}: {dict(stats[ax])}")
     print(f"length   : {dict(stats['_len'])}")
     print(f"groups   : {dict(stats['_groups'])}")
+    print(f"pair-len : {dict(stats['_pair_len'])}")
     if problems:
         print(f"\nAUDIT FAILED — {len(problems)} problem(s):")
         for p in problems[:40]:
             print("  -", p)
     else:
-        print("\nAUDIT CLEAN: no leakage words, all concrete, no duplicates.")
+        print("\nAUDIT OK: no leakage word, all concrete, no duplicates.")
+    if stats.get("_warnings"):
+        print(f"\nWARNINGS ({len(stats['_warnings'])} unmatched-length pair(s)) -- "
+              f"length is a live confound on these motifs; cover it with the "
+              f"length-only probe control in step5_robust.py:")
+        for w in stats["_warnings"]:
+            print("  -", w)
     os.makedirs("data", exist_ok=True)
     write_csv("data/hard.csv", rows)
     print(f"WROTE data/hard.csv: {len(rows)} hard-context sentences")

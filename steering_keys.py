@@ -322,14 +322,10 @@ class SteerController:
         sub-threshold nudge from an intervention large enough to break the model.
         """
         with torch.no_grad():
-            n = h.float().norm(dim=-1)            # per-token norm
+            hn = h.float()
+            n = hn.norm(dim=-1)            # per-token norm
             med = float(n.median())
             self.h_norms.append(med)
-        # NOTE: the hook only ever fires at scale != 0 (arm() returns early otherwise),
-        # so there are no scale-0 hook readings. That is fine -- these norms are taken
-        # BEFORE the add, so the first one already measures the UN-steered residual
-        # stream and is a valid model-level reference. Fixing it here (not only in
-        # report_dose) keeps the very first batch of doses from dividing by ~0.
         if self.h_ref is None:
             self.h_ref = med
         if self.scale:

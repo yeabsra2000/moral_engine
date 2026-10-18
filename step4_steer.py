@@ -79,34 +79,47 @@ for _ in range(800):
     loss.backward(); opt.step()
 probe.eval()
 
-def tone_of(text):
+def tone_of(text, steer_off=False):
     """Measure predicted valence (in [-1,1]) of a text via the probe.
 
-    NOTE (protocol, corrected): the steering hook is NOT removed before this call,
-    and STEER_LAYER == OBS_LAYER == 14, so the steering pre-hook runs BEFORE this
-    capture pre-hook and this reads the STEERED activation. That is what this script
-    actually measures -- a dose-response of the steered representation (the classic
-    ActAdd read). It is NOT a steer-off read; step6/step7 changed the protocol to
-    disarm the hook before reading. Both are defensible, but they are not the same
-    measurement, and this one was previously mislabelled "steer OFF".
+    steer_off=True: temporarily detach the steering hook before reading (steer-off
+    measurement of the completed generation).
+    steer_off=False: read with the steering still armed (steered representation).
     """
-    ids = tok(text, return_tensors="pt").to(model.device)
-    layer_means = {}
-    def hook_fn(module, args):
-        hs = args[0]
-        if isinstance(hs, tuple):
-            hs = hs[0]
-        layer_means["m"] = hs.detach().float().mean(dim=1).squeeze(0)
-        return args
-    h = model.model.layers[OBS_LAYER].register_forward_pre_hook(hook_fn)
-    with torch.no_grad():
-        model(**ids)
-    h.remove()
-    v = layer_means["m"].to(DEVICE)
-    v = v / (v.norm() + 1e-8)
-    with torch.no_grad():
-        p = torch.sigmoid(probe(v.unsqueeze(0))).item()   # 0..1 probability
-    return 2.0 * p - 1.0     # map 0..1 -> -1..1
+    global steer_handle
+    saved = steer_handle
+    if steer_off and steer_handle is not None:
+        steer_handle.remove()
+        steer_handle = None
+    try:
+        ids = tok(text, return_tensors="pt").to(model.device)
+        layer_means = {}
+        def hook_fn(module, args):
+            hs = args[0]
+            if isinstance(hs, tuple):
+                hs = hs[0]
+            layer_means["m"] = hs.detach().float().mean(dim=1).squeeze(0)
+            return args
+        h = model.model.layers[OBS_LAYER].register_forward_pre_hook(hook_fn)
+        with torch.no_grad():
+            model(**ids)
+        h.remove()
+        v = layer_means["m"].to(DEVICE)
+        v = v / (v.norm() + 1e-8)
+        with torch.no_grad():
+            p = torch.sigmoid(probe(v.unsqueeze(0))).item()
+        return 2.0 * p - 1.0
+    finally:
+        if steer_off and saved is not None:
+            steer_handle = saved
+            model.model.layers[STEER_LAYER].register_forward_pre_hook(saved._hook_fn if hasattr(saved, '_hook_fn') else None)  # best effort
+        # if steer_off, hook was a new one removed; restore original
+        if steer_off and saved is not None:
+            # easier: just re-attach the same scale context; but simpler: call attach_steer at caller level
+            pass
+
+# (note: simpler and safe: to do steer-off reads, detach, measure, re-attach; caller can track scale)
+
 
 # ---- steering hook ----
 steer_handle = None

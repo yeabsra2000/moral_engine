@@ -51,7 +51,7 @@ except ModuleNotFoundError:                    # dataset.py truly missing -> rea
 except ImportError:                            # older dataset.py without GROUPS
     from dataset import DATA
     GROUPS = None
-from probe_cv import cv_rep, template_only_features  # shared, unit-tested CV logic
+from probe_cv import cv_rep, template_only_features, shared_context_features  # unit-tested CV logic
 
 print("CUDA:", torch.cuda.is_available())
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
@@ -155,8 +155,8 @@ for layer_idx in TARGET_LAYERS:
         if active.sum() < 20:
             print(f"  {AXES[ax]:<10}: too few active samples ({active.sum().item()})"); continue
         y = (LABELS[active, ax] > 0).float(); Xa = X[active]
-        gs = ([GROUPS[i] for i in torch.nonzero(active).view(-1).tolist()]
-              if HAS_GROUPS else None)
+        act_idx = torch.nonzero(active).view(-1).tolist()
+        gs = ([GROUPS[i] for i in act_idx] if HAS_GROUPS else None)
         got = {}
         for mode, groups in (("random", None), ("grouped", gs)):
             if mode == "grouped" and not HAS_GROUPS:
@@ -216,6 +216,27 @@ for layer_idx in TARGET_LAYERS:
             if got['grouped'][0] > 0.55 and ln >= got['grouped'][0] - 0.05:
                 print(f"  {AXES[ax]:<10} {'':>9}  -> CONFOUND WARNING: length alone matches the "
                       f"grouped MLP ({got['grouped'][0]:.2f}); do not cite this as tone.")
+            # FRAME-LEAK control: one-hot over surface tokens shared across >1 group,
+            # under the SAME grouped split. A grouped split kills the VERB leak but
+            # NOT a fixed suffix/object that tracks polarity and is reused across
+            # groups (the Care/Harm locative and Fairness object in the original
+            # templates). If this model-free feature space already matches the
+            # activation probe, the "reading" is a surface frame, not tone.
+            sents = [DATA[i][0] for i in act_idx]
+            sf = shared_context_features(sents, gs)
+            if sf.size(1) > 0:
+                _fs = [cv_rep(sf, y, 64, s, gs) for s in range(REPS)]
+                shf = statistics.fmean(_fs)
+                print(f"  {AXES[ax]:<10} {'':>9}  shared-frame CONTROL (grouped) = "
+                      f"{shf:.2f}  ->  activation signal above shared frame = "
+                      f"{got['grouped'][0] - shf:+.2f}")
+                if shf >= got['grouped'][0] - 0.05:
+                    print(f"  {AXES[ax]:<10} {'':>9}  -> FRAME-LEAK WARNING: tokens shared "
+                          f"across groups alone decode this axis at {shf:.2f}; the reading "
+                          f"is a surface artifact, not activation-level tone.")
+            else:
+                print(f"  {AXES[ax]:<10} {'':>9}  shared-frame CONTROL (grouped) = n/a "
+                      f"(no tokens are shared across groups)")
 print("=" * 78)
 print("Read the GROUPED row as the honest accuracy, and the CONTROL row as the")
 print("accuracy that pure template identity already buys under a random split.")

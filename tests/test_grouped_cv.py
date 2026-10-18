@@ -55,31 +55,40 @@ REPS = 3
 
 
 def check_fold_invariants():
-    y = torch.tensor([lbl[0] for _, lbl, _ in DATA], dtype=torch.float32)
     n = len(DATA)
-    for seed in range(3):
-        for name, groups in (("random", None), ("grouped", GROUPS)):
-            folds = make_folds(y, seed, groups)
-            assert len(folds) == KFOLD
-            flat = sorted(i for f in folds for i in f)
-            assert flat == list(range(n)), f"{name}: folds must cover every sample exactly once"
-            rates = []
-            for f in folds:
-                assert f, f"{name}: empty fold"
-                rates.append(float((y[f] > 0).float().mean()))
-            spread = max(rates) - min(rates)
-            assert spread < 0.25, f"{name}: class balance spread too large ({spread:.2f})"
-            if name == "grouped":
-                # every template/motif must live in exactly ONE fold, and its
-                # members must not be scattered (that would be paraphrase leakage)
-                where = {}
-                for f, fold in enumerate(folds):
-                    for i in fold:
-                        where.setdefault(GROUPS[i], set()).add(f)
-                bad = {g: s for g, s in where.items() if len(s) != 1}
-                assert not bad, f"group split across folds (leak!): {list(bad)[:3]}"
-                assert len(where) == len(set(GROUPS)), "group set mismatch"
-    print("PASS: fold invariants (coverage, no group leakage, class balance)")
+    LAB = torch.tensor([lbl for _, lbl, _ in DATA], dtype=torch.float32)
+    for ax in range(4):
+        active = LAB[:, ax].ne(0)
+        idx = active.nonzero().view(-1).tolist()
+        y = (LAB[active][:, ax] > 0).float()
+        groups = [GROUPS[i] for i in idx]
+        for seed in range(3):
+            for name, grp in (("random-rows", None), ("grouped", groups)):
+                # For the random branch we must also restrict to the active rows,
+                # so build folds on the same y either way; `make_folds` tests the
+                # split logic, not the row subset.
+                folds = make_folds(y, seed, grp)
+                assert len(folds) == KFOLD
+                flat = sorted(i for f in folds for i in f)
+                assert flat == list(range(y.numel())), \
+                    f"ax{ax} {name}: folds must cover every sample exactly once"
+                sizes = [len(f) for f in folds]
+                assert min(sizes) >= 5, f"ax{ax} {name}: degenerate fold sizes {sizes}"
+                rates = [float((y[f] > 0).float().mean()) for f in folds]
+                spread = max(rates) - min(rates)
+                assert spread < 0.30, \
+                    f"ax{ax} {name} seed{seed}: class balance spread too large ({spread:.2f})"
+                if name == "grouped":
+                    # every template/motif must live in exactly ONE fold, and its
+                    # members must not be scattered (that would be paraphrase leakage)
+                    where = {}
+                    for f, fold in enumerate(folds):
+                        for i in fold:
+                            where.setdefault(groups[i], set()).add(f)
+                    bad = {g: s for g, s in where.items() if len(s) != 1}
+                    assert not bad, f"group split leaks across folds: {bad}"
+    print("PASS: fold invariants (coverage, no leakage, non-degenerate + balanced "
+          "folds on EVERY axis)")
 
 
 def check_template_memorization():

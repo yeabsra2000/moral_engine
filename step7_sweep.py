@@ -218,8 +218,8 @@ XMAT = {}
 for key, rows in acc.items():
     M = torch.stack(rows).to(DEVICE)
     XMAT[key] = M / (M.norm(dim=1, keepdim=True) + 1e-8)   # L2-normalize per row
-print(f"  built {len(XMAT)} activation matrices of shape "
-      f"{next(iter(XMAT.values())).shape}")
+    print(f"  built {len(XMAT)} activation matrices of shape "
+          f"{(next(iter(XMAT.values())) if XMAT else (torch.zeros(1,1),)).shape}")
 
 LAB = torch.tensor([lbl for _, lbl, _ in DATA], dtype=torch.float32)
 
@@ -231,8 +231,9 @@ if DRY:
     _gs = torch.Generator().manual_seed(7)
     # drawn on CPU (the generator is CPU), then moved: a CPU `_sig` added to a CUDA
     # XMAT row raises a device mismatch, and MESE_DRY=1 is encouraged on Colab.
-    _dev = next(iter(XMAT.values())).device
-    _dirs = torch.randn(4, next(iter(XMAT.values())).size(1),
+    _dev = next(iter(XMAT.values())).device if XMAT else torch.device('cpu')
+    _in_dim = next(iter(XMAT.values())).size(1) if XMAT else 64
+    _dirs = torch.randn(4, _in_dim,
                         generator=_gs).to(_dev)
     _dirs = _dirs / _dirs.norm(dim=1, keepdim=True)
     _sig = sum(LAB[:, a].to(_dev).unsqueeze(1) * _dirs[a].unsqueeze(0) for a in range(4))
@@ -373,8 +374,8 @@ def generate(prompt):
 def fluency(text):
     """Mean per-token log-likelihood (higher = more fluent English)."""
     ids = tok(text, return_tensors="pt").to(model.device)['input_ids']
-    if ids.size(1) < 2:          # empty/1-token text: mean() of nothing is nan, not 0
-        return float("nan")      # (callers skip empty text; this is belt-and-braces)
+    if ids.size(1) < 2:
+        return float("nan")
     with torch.no_grad():
         logits = model(ids).logits
     logp = torch.nn.functional.log_softmax(logits[:, :-1], dim=-1)

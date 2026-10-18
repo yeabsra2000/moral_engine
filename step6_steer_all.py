@@ -284,20 +284,26 @@ def generate(prompt):
     return tok.decode(out[0][ids['input_ids'].shape[1]:], skip_special_tokens=True)
 
 
-def seed_cell(axis, direction):
-    """Seed from (axis, direction) ONLY -- deliberately NOT from `scale`.
+def seed_cell(axis, direction, prompt_i=0, sample_i=0):
+    """Seed from (axis, direction, prompt index, sample index) -- NOT from `scale`.
 
-    Common random numbers: every scale of one direction draws from the SAME stream, so
-    the slope tone(max) - tone(0) is a PAIRED difference. Prompt difficulty, which
-    dominates the variance here, cancels instead of being paid twice.
+    Common random numbers: every scale of one direction draws from the SAME
+    (prompt, sample) stream, so the slope tone(max) - tone(0) is a PAIRED
+    difference. Prompt difficulty, which dominates the variance here, cancels
+    instead of being paid twice.
 
-    BUG FIX (2026-10-03). The previous version added `int(round(scale * 1000))` to the
-    seed, so every scale got an INDEPENDENT stream -- precisely the unpaired
+    BUG FIX (2026-10-03). The previous version added `int(round(scale * 1000))` to
+    the seed, so every scale got an INDEPENDENT stream -- precisely the unpaired
     comparison this function existed to eliminate -- and it seeded from `hash(str)`,
     which Python 3 randomizes per process, so even the per-direction seed was not
-    reproducible between runs. See steering_keys.stable_seed.
+    reproducible. See steering_keys.stable_seed.
+
+    BUG FIX (2026-10-18, PSEUDOREPLICATION). Seeding from (axis, direction) alone
+    made every SAMPLE of a prompt byte-identical, so the effective n was the number
+    of prompts, not prompts*samples. The prompt/sample indices are now part of the
+    seed (see step8_dose.seed_cell for the full note).
     """
-    s = stable_seed(axis, direction)
+    s = stable_seed(axis, direction, f"p{prompt_i}", f"s{sample_i}")
     torch.manual_seed(s); random.seed(s)
 
 def fluency(text):
@@ -343,11 +349,11 @@ for axis in range(4):
         tones, flu = {}, {}
         for scale in SCALES:
             ts, fs = [], []
-            for p in PROMPTS:
-                for _ in range(SAMPLES):
+            for pi, p in enumerate(PROMPTS):
+                for si in range(SAMPLES):
                     # ARM PER GENERATION (SteerController arms, generates, disarms),
                     # so the honest steer-off read below cannot break the treatment.
-                    seed_cell(AXES[axis], name)      # paired slope, see docstring
+                    seed_cell(AXES[axis], name, pi, si)   # paired slope, see docstring
                     t = STEER.generate(p, delta, scale, LAYER, generate)
                     if not t.strip():           # empty generation -> nothing to score
                         n_empty += 1

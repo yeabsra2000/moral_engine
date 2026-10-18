@@ -8,7 +8,7 @@ each pole is generated with a directional scenario hint.
 Writes dataset_draft.csv  ->  columns: sentence,V,A,C,F,proposed,scenario
 Review these with dataset_validate.py; you finalize the hard labels yourself.
 """
-import csv, torch
+import csv, os, torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
 # scenario hint per axis/pole (tone set by situation, not by emotion words)

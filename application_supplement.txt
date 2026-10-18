@@ -1,0 +1,19 @@
+Research Supplement
+
+Title: Probing Moral Tone in Language Models: An Independent Study on Activation Steering
+
+I developed an experimental system to investigate whether large language models possess internal representations of moral tone—the concepts of harm/care, valence, arousal, and fairness. My work explores two primary questions: (1) Can small probe networks accurately read moral/emotional states directly from LLM activations, and (2) Can we reliably steer model behavior along moral axes using activation steering?
+
+Method
+My system comprises two main components: the MESE-CR framework (Multi-Dimensional Morality & Emotional Steering Engine with Contextual Recalibration) and an automated treatment audit. For the first component, I trained small neural networks (probes) to map activation patterns from specific model layers to target dimensions (valence, arousal, fairness). These probes were evaluated on held-out validation sets, where they demonstrated the ability to read moral/emotional tone from model activations with accuracy ranging from 0.75 to 1.00.
+
+I then implemented activation steering hooks within the MESE-CR architecture to test whether the discovered activation subspaces could indeed be causally manipulated to influence model behavior along desired ethical dimensions.
+
+To ensure the reliability of my experimental setup, I implemented a per-generation "treatment audit" that tracks whether the steering hook was actively engaged during each generation. This audit revealed a critical implementation flaw in my initial approach: the steering hook was armed only once per scale and disarmed on the first sample, causing any genuine treatment effects to be diluted approximately 20× into the noise floor. Correcting this treatment loop uncovered a key limitation of my research methodology.
+
+By implementing this audit, I learned that my initial steering experiments showed null effects only because the treatment was effectively hidden in noise. After correcting the hook activation pattern, I discovered seed-dependent variability. Specifically, on the Arousal dimension, I observed a steering effect on only 1 of 2 independent seeds, indicating that even with proper treatment, the steering result remained unreliable without additional methodological refinements. This vulnerability highlights the importance of rigorous treatment audits in activation-steering experiments, as standard measurement controls can easily miss such implementation biases.
+
+Conclusion
+The research demonstrates both the potential of activation steering for reading and manipulating moral tone in large language models, as well as the critical importance of rigorous implementation audits. The findings suggest that without such auditing, even legitimate effects in AI alignment could be effectively hidden, potentially misleading both practitioners and researchers in the field.
+
+GitHub repository and full documentation: https://github.com/yourusername/moral-engine

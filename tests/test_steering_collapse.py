@@ -403,6 +403,7 @@ print("          a level where fluency is at risk; see step8_dose.py's [dose] ta
 # error that measurement controls cannot detect, because a broken control is silent.
 print("--- G. inert controls (must actually do what they claim) ---")
 
+import re
 import subprocess
 
 # (1) stable_seed must be stable ACROSS PROCESSES. `hash()` on a str is randomized
@@ -428,29 +429,28 @@ print(f"       (for contrast, hash('Valence')%1e5 gave {_h2.stdout.strip()} then
       f"{_h3.stdout.strip()} in two processes)")
 print("       -> seeding a 'reproducible' control from hash() was never reproducible.")
 
-# (3) THE PAIRING BUG. seed_cell must NOT vary with scale, otherwise every scale
-#     draws an independent stream and the slope is unpaired -- the variance this
-#     function exists to remove. Check the seed the scripts actually compute.
-_seed_probe = ("import sys, os; sys.path.insert(0, %r)\n"
-               "import re\n"
-               "src = open('step8_dose.py').read()\n"
-               "print('scale' in src.split('def seed_cell')[1].split('def ')[0].split('stable_seed')[1])"
-               % _ROOT)
-_r = subprocess.run([sys.executable, "-c", _seed_probe], capture_output=True, text=True,
-                    cwd=_ROOT)
-_body = open(os.path.join(_ROOT, "step8_dose.py"),
-             encoding="utf-8").read().split("def seed_cell")[1].split("\ndef ")[0]
-_seed_expr = _body.split("stable_seed(")[1].split(")")[0]
-check("seed_cell does NOT mix `scale` into the seed", float("scale" in _seed_expr), 0.0, 0.0)
-print(f"       (seed expression is stable_seed({_seed_expr}) -- no `scale` term, so every")
-print("        scale of one direction shares a stream and the slope is paired.)")
+# (3) The seed must be PAIRED across scales (no `scale` term) but must DISTINGUISH
+#     every drawn sample. The first version mixed `scale` in (unpaired comparison);
+#     the second omitted the prompt/sample index, so all SAMPLES generations of a
+#     prompt were byte-identical and the effective n was #prompts, not
+#     #prompts*samples -- the reported +-SE was understated ~sqrt(samples)x.
+_b8 = open(os.path.join(_ROOT, "step8_dose.py"),
+           encoding="utf-8").read().split("def seed_cell")[1].split("\ndef ")[0]
+_s8_seed = ";".join(re.findall(r"stable_seed\(([^)]*)\)", _b8))
+check("seed_cell does NOT mix `scale` into the seed", float("scale" in _s8_seed), 0.0, 0.0)
+check("seed_cell includes the prompt index", float("prompt_i" in _b8), 1.0, 1.001)
+check("seed_cell includes the sample index", float("sample_i" in _b8), 1.0, 1.001)
+print("       (seed_cell keys on direction AND (prompt_i, sample_i) -- no `scale`,")
+print("        so the slope stays paired AND every drawn sample is distinct.)")
 
 # (4) And the same for step6, so the two scripts cannot drift apart.
 _b6 = open(os.path.join(_ROOT, "step6_steer_all.py"),
            encoding="utf-8").read().split("def seed_cell")[1].split("\ndef ")[0]
-_e6 = _b6.split("stable_seed(")[1].split(")")[0]
-check("step6 seed_cell does NOT mix `scale` either", float("scale" in _e6), 0.0, 0.0)
-print(f"       (step6: stable_seed({_e6}) -- consistent with step8.)")
+_s6_seed = ";".join(re.findall(r"stable_seed\(([^)]*)\)", _b6))
+check("step6 seed_cell does NOT mix `scale` either", float("scale" in _s6_seed), 0.0, 0.0)
+check("step6 seed_cell includes prompt + sample index",
+      float("prompt_i" in _b6 and "sample_i" in _b6), 1.0, 1.001)
+print("       (step6: keys on (axis, direction, prompt_i, sample_i) -- consistent.)")
 
 # (5) A sham DISTRIBUTION, not one draw. One post-hoc sham is a lottery; the first
 #     dose run had a single sham that "beat" the real key, which says nothing about
@@ -459,13 +459,12 @@ _s8 = open(os.path.join(_ROOT, "step8_dose.py"), encoding="utf-8").read()
 check("sham distribution is configurable (MESE_SHAM)", float("MESE_SHAM" in _s8), 1.0, 1.001)
 check("sham sloped, not just generated",
       float("SHAM_SLOPES" in _s8), 1.0, 1.001)
-# (5b) An independent replication must be REQUESTABLE. seed_cell is deterministic,
-#      so a plain re-run reproduces the logged generations exactly -- it extends the
-#      sham count but cannot replicate anything. MESE_SEED re-keys every cell's
-#      stream; without it, "re-run to confirm" is a command that does nothing new.
+# (5b) An independent replication must be REQUESTABLE, and the DEFAULT seed must
+#      fully determine a run (so it can be replayed). MESE_SEED re-keys every cell's
+#      stream without editing code; the default (0) is reproducible.
 check("replication knob present (MESE_SEED)", float("MESE_SEED" in _s8), 1.0, 1.001)
-check("default seed still reproduces the logged runs",
-      float('SEED_REP == "0"' in _s8), 1.0, 1.001)
+check("default seed is deterministic (SEED_REP default '0')",
+      float('MESE_SEED", "0"' in _s8), 1.0, 1.001)
 print("       -> the real key is compared against a NULL DISTRIBUTION of slopes,")
 print("          which is the only comparison a no-effect claim can rest on.")
 

@@ -34,10 +34,12 @@ without editing code:
     MESE_AXIS=Arousal MESE_SHAM=25 python step8_dose.py
     MESE_SCALES=0,10,50,100,200 python step8_dose.py
     MESE_SEED=1 python step8_dose.py   # INDEPENDENT replication: fresh generation
-                                       # streams (default 0 reproduces the logged
-                                       # runs byte-for-byte -- a re-run with the
-                                       # same MESE_SEED is an EXTENSION, not a
-                                       # replication; see results.md M13d)
+                                       # streams. MESE_SEED re-keys every cell's
+                                       # stream; keep it fixed to reproduce a run.
+                                       # (The 2026-10 logs predate the
+                                       # pseudoreplication fix, so the default no
+                                       # longer reproduces them -- see results.md
+                                       # M15.)
     MESE_DRY=1 python step8_dose.py     # CPU wiring check, meaningless numbers
 
 The DEFAULT AXIS IS Care/Harm. The steering verdict must be read off the most
@@ -222,27 +224,34 @@ def fluency(text):
     return logp.gather(-1, ids[:, 1:].unsqueeze(-1)).mean().item()
 
 
-def seed_cell(direction):
-    """Seed from (direction) ONLY -- deliberately NOT from `scale`.
+def seed_cell(direction, prompt_i=0, sample_i=0):
+    """Seed from (direction, prompt index, sample index) -- NOT from `scale`.
 
-    Common random numbers: every scale of one direction draws from the SAME stream, so
-    the slope tone(max) - tone(0) is a PAIRED difference and prompt difficulty cancels.
+    Common random numbers: every scale of one direction draws from the SAME
+    (prompt, sample) stream, so the slope tone(max) - tone(0) is a PAIRED
+    difference and prompt difficulty cancels.
 
-    BUG FIX (2026-10-03). Two real defects lived in the previous version of this line,
-    both of which made it look protective while doing nothing:
-      1. it added `int(round(scale * 1000))` to the seed, so every scale got an
-         INDEPENDENT stream -- the exact unpaired comparison it claimed to fix;
-      2. it seeded from `hash(str)`, which Python 3 randomizes PER PROCESS, so even
-         the per-direction seed was not reproducible between runs.
-    Now: deterministic via stable_seed, and identical across the scale ladder.
+    BUG FIX (2026-10-03). The previous version added `int(round(scale * 1000))`
+    to the seed, so every scale got an INDEPENDENT stream -- the exact unpaired
+    comparison it claimed to fix -- and it seeded from `hash(str)`, which Python 3
+    randomizes PER PROCESS, so even the per-direction seed was not reproducible.
+
+    BUG FIX (2026-10-18, PSEUDOREPLICATION). The version above seeded from
+    (axis, direction) ALONE, so all SAMPLES generations of a prompt were the SAME
+    text (measured: 6/6 byte-identical). The effective sample size was therefore
+    the number of PROMPTS, not prompts*samples; the reported +-SE of the paired
+    slope was understated ~sqrt(samples) (~2.7x at 6 samples) and every
+    "z=+9"-style headline inflated with it. The seed now includes the prompt and
+    sample indices, so every drawn sample is distinct and the paired SE is honest.
     MESE_SEED (default 0) additionally re-keys EVERY cell's stream (real and sham)
     so a genuinely independent replication can be requested without editing code.
-    With the default, this function reproduces the logged runs exactly -- which
-    means a plain re-run EXTENDS the sham count but does not replicate the
-    generations (that is how the n=25 Arousal run reproduced the n=15 one).
+    NOTE: with this fix the default no longer reproduces the OLD logged runs (they
+    predate the fix); it produces a fresh, correctly-seeded stream.
     """
-    s = (stable_seed(AXIS, direction) if SEED_REP == "0"
-         else stable_seed(AXIS, direction, f"rep{SEED_REP}"))
+    parts = (AXIS, direction, f"p{prompt_i}", f"s{sample_i}")
+    if SEED_REP != "0":
+        parts = (AXIS, direction, f"rep{SEED_REP}", f"p{prompt_i}", f"s{sample_i}")
+    s = stable_seed(*parts)
     torch.manual_seed(s); random.seed(s)
 
 
@@ -420,9 +429,9 @@ for name in DIRECTIONS:
     print(f"{'scale':>7} {'tone':>8} {'fluency':>9} {'d_flu':>8}  status")
     for scale in SCALES:
         ts, fs = [], []
-        for p in PROMPTS:
-            for _ in range(SAMPLES):
-                seed_cell(name)             # same stream for every scale -> paired
+        for pi, p in enumerate(PROMPTS):
+            for si in range(SAMPLES):
+                seed_cell(name, pi, si)     # same (prompt,sample) stream per scale -> paired
                 t = STEER.generate(p, delta, scale, LAYER, generate)
                 if not t.strip():
                     n_empty += 1
@@ -481,9 +490,9 @@ if N_SHAM > 1:
         per_scale = {}
         for scale in SCALES:
             ts, fs = [], []
-            for p in PROMPTS:
-                for _ in range(SAMPLES):
-                    seed_cell(f"sham{i}")     # its own stream, shared across scales
+            for pi, p in enumerate(PROMPTS):
+                for si in range(SAMPLES):
+                    seed_cell(f"sham{i}", pi, si)   # same (prompt,sample) per scale -> paired
                     t = STEER.generate(p, delta, scale, LAYER, generate)
                     if not t.strip():
                         n_empty += 1
